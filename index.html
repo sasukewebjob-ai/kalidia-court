@@ -1,0 +1,2205 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🏸 バドミントン コート振り分け</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --bg: #f0f4f8;
+            --surface: #ffffff;
+            --surface2: #e8eef4;
+            --border: #c8d6e0;
+            --accent: #059669;
+            --accent2: #047857;
+            --male: #2563eb;
+            --female: #db2777;
+            --guest: #d97706;
+            --text: #1e293b;
+            --muted: #64748b;
+            --red: #dc2626;
+            --absent: #94a3b8;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: linear-gradient(135deg, #ffffff, #e8f5f0, #f0f9ff);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            box-shadow: 0 2px 12px #00000012;
+        }
+
+        .logo {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 18px;
+            font-weight: 900;
+            margin-left: 12px;
+            background: linear-gradient(to right, #059669, #2563eb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hstats {
+            display: flex;
+            gap: 8px;
+        }
+
+        .badge {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .badge b {
+            color: var(--accent);
+        }
+
+        /* ── Layout ── */
+        .app {
+            display: flex;
+            min-height: calc(100vh - 67px);
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 220px;
+            min-width: 220px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sb-head {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--muted);
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+
+        .sb-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .sec-label {
+            font-size: 10px;
+            color: var(--muted);
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            padding: 6px 2px 6px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .sec-label.male {
+            color: var(--male);
+        }
+
+        .sec-label.female {
+            color: var(--female);
+        }
+
+        .sec-label.guest {
+            color: var(--guest);
+        }
+
+        .sec-label::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+            flex-shrink: 0;
+        }
+
+        /* ── Chip ── */
+        .chip {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 9px;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            cursor: grab;
+            user-select: none;
+            border: 1px solid transparent;
+            background: var(--surface2);
+            transition: all .15s;
+            touch-action: none;
+            position: relative;
+        }
+
+        .chip.male {
+            border-color: #2563eb30;
+        }
+
+        .chip.female {
+            border-color: #db277730;
+        }
+
+        .chip.guest {
+            border-color: #d9770630;
+        }
+
+        .chip:hover {
+            transform: translateX(2px);
+            border-color: var(--accent);
+            background: #05966914;
+        }
+
+        .chip.selected {
+            border-color: var(--accent);
+            background: #05966920;
+            box-shadow: 0 0 0 2px #05966948;
+        }
+
+        .chip.dragging {
+            opacity: .25;
+        }
+
+        .av {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .male .av {
+            background: #2563eb18;
+            color: var(--male);
+        }
+
+        .female .av {
+            background: #db277718;
+            color: var(--female);
+        }
+
+        .guest .av {
+            background: #d9770618;
+            color: var(--guest);
+        }
+
+        .cn {
+            font-size: 13px;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .dh {
+            color: var(--border);
+            font-size: 13px;
+        }
+
+        /* ── Guest inputs ── */
+        .g-section {
+            border-top: 1px solid var(--border);
+            padding: 8px 12px;
+            background: #fbbf2410;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .g-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex: 1;
+        }
+
+        .g-toggle {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 2px solid var(--guest);
+            background: transparent;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .g-toggle.on {
+            background: var(--guest);
+        }
+
+        .g-toggle.on::after {
+            content: '✓';
+            color: #000;
+            font-size: 10px;
+            font-weight: 900;
+        }
+
+        .g-inp {
+            flex: 1;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 8px;
+            color: var(--text);
+            font-size: 12px;
+            font-family: inherit;
+        }
+
+        .g-inp:focus {
+            outline: none;
+            border-color: var(--guest);
+        }
+
+        .g-inp:disabled {
+            opacity: .35;
+        }
+
+        /* ── Courts area ── */
+        .courts-area {
+            flex: 1;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .ctrl {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .pl {
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .pbtn {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 5px 11px;
+            color: var(--muted);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all .2s;
+            font-family: inherit;
+        }
+
+        .pbtn:hover,
+        .pbtn.on {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: #05966912;
+        }
+
+        .sbtn {
+            background: #6366f112;
+            border: 1px solid #6366f140;
+            border-radius: 6px;
+            padding: 5px 11px;
+            color: #4f46e5;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all .2s;
+            font-family: inherit;
+        }
+
+        .sbtn:hover {
+            background: #6366f120;
+        }
+
+        .savebtn {
+            background: #05966912;
+            border: 1px solid #05966940;
+            border-radius: 6px;
+            padding: 5px 11px;
+            color: var(--accent);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all .2s;
+            font-family: inherit;
+            font-weight: 700;
+        }
+
+        .savebtn:hover {
+            background: #05966920;
+        }
+
+        .rbtn {
+            margin-left: auto;
+            background: #dc262610;
+            border: 1px solid #dc262630;
+            border-radius: 6px;
+            padding: 5px 11px;
+            color: var(--red);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all .2s;
+            font-family: inherit;
+        }
+
+        .rbtn:hover {
+            background: #dc262620;
+        }
+
+        /* ── Absent section ── */
+        .absent-section {
+            border-top: 1px solid var(--border);
+            padding: 6px 12px;
+            background: #94a3b810;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sec-label.absent {
+            color: var(--absent);
+            flex-shrink: 0;
+        }
+
+        .absent-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            flex: 1;
+            min-height: 24px;
+        }
+
+        .absent-chips:empty::after {
+            content: '欠席者はいません';
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .chip.absent-chip {
+            border-color: #94a3b830;
+            opacity: .65;
+        }
+
+        .chip.absent-chip .av {
+            background: #94a3b818;
+            color: var(--absent);
+        }
+
+        .abs-btn {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all .15s;
+            margin-left: auto;
+        }
+
+        .abs-btn.to-absent {
+            background: #94a3b820;
+            color: var(--absent);
+            opacity: 0;
+        }
+
+        .chip:hover .abs-btn.to-absent {
+            opacity: 1;
+        }
+
+        .abs-btn.to-return {
+            background: #10b98120;
+            color: var(--accent);
+        }
+
+        .abs-btn:hover {
+            transform: scale(1.2);
+        }
+
+        @media (hover: none) {
+            .abs-btn.to-absent {
+                opacity: 1;
+            }
+        }
+
+        /* ── Courts grid ── */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            flex: 1;
+        }
+
+        /* ── Court card ── */
+        .card {
+            background: #ffffff;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: border-color .2s;
+            min-height: 260px;
+        }
+
+        .card.wide {
+            grid-column: span 2;
+            min-height: 280px;
+        }
+
+        .card.hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px #05966930, inset 0 0 20px #05966908;
+        }
+
+        .card.full {
+            border-color: #ef444460;
+        }
+
+        .card-head {
+            padding: 10px 14px;
+            background: linear-gradient(135deg, #e8eef4, #f5f7fa);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cname {
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 700;
+            font-family: inherit;
+            flex: 1;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: border-color .2s;
+            padding: 2px 4px;
+        }
+
+        .cname:focus {
+            outline: none;
+            border-bottom-color: var(--accent);
+            cursor: text;
+        }
+
+        .cnt {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .cnt.ok {
+            background: #05966918;
+            color: var(--accent);
+        }
+
+        .cnt.full {
+            background: #dc262618;
+            color: var(--red);
+        }
+
+        .card-body {
+            flex: 1;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 5px;
+            position: relative;
+            min-height: 180px;
+        }
+
+        .drop-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--border);
+            font-size: 11px;
+            pointer-events: none;
+        }
+
+        .drop-hint div:first-child {
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+
+        /* ── Court member ── */
+        .cmem {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 9px;
+            border-radius: 7px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+            transition: all .15s;
+            animation: fadeIn .2s ease;
+        }
+
+        .cmem:hover {
+            border-color: var(--accent);
+            background: #05966910;
+        }
+
+        .cmem.male {
+            border-left: 3px solid var(--male);
+        }
+
+        .cmem.female {
+            border-left: 3px solid var(--female);
+        }
+
+        .cmem.guest {
+            border-left: 3px solid var(--guest);
+        }
+
+        .cmem.dragging {
+            opacity: .2;
+        }
+
+        .cmem.selected {
+            border-color: var(--accent);
+            background: #05966918;
+        }
+
+        .delbtn {
+            margin-left: auto;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dc262618;
+            color: var(--red);
+            border: none;
+            cursor: pointer;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity .15s;
+            flex-shrink: 0;
+        }
+
+        .cmem:hover .delbtn {
+            opacity: 1;
+        }
+
+        /* ── Pair ── */
+        .pair-group {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            border-radius: 10px;
+            overflow: visible;
+            animation: fadeIn .2s ease;
+            position: relative;
+            border: 2px solid transparent;
+            transition: box-shadow .15s ease, transform .15s ease;
+        }
+        .pair-group.pair-selected {
+            box-shadow: 0 0 0 3px #3b82f6, 0 4px 12px rgba(59,130,246,0.4);
+            transform: scale(1.02);
+        }
+
+        .pair-group .cmem {
+            border-radius: 0;
+            animation: none;
+            border: none;
+            border-left: none;
+        }
+
+        .pair-group .cmem:first-child {
+            border-radius: 8px 0 0 8px;
+        }
+
+        .pair-group .cmem:last-child {
+            border-radius: 0 8px 8px 0;
+        }
+
+        .pair-connector {
+            width: 28px;
+            min-width: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 900;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .unpair-btn {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #ef4444;
+            color: #fff;
+            border: 2px solid #ffffff;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity .15s;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, .4);
+        }
+
+        .pair-group:hover .unpair-btn {
+            opacity: 1;
+        }
+
+        /* スマホではタッチしやすいよう常時表示 */
+        @media (hover: none) {
+            .unpair-btn {
+                opacity: 1;
+            }
+        }
+
+        /* ── Drag ghost ── */
+        #ghost {
+            position: fixed;
+            z-index: 9999;
+            pointer-events: none;
+            display: none;
+            background: var(--surface2);
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            padding: 7px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            box-shadow: 0 8px 30px #00000020;
+            transform: rotate(2deg);
+            transition: transform .1s;
+            min-width: 80px;
+        }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--surface2);
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 13px;
+            z-index: 9998;
+            animation: fadeIn .3s;
+            box-shadow: 0 4px 20px #00000015;
+        }
+
+        /* ── Pair hint ── */
+        .pair-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            border: 1px solid #a78bfa;
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-size: 13px;
+            font-weight: 700;
+            z-index: 300;
+            animation: fadeIn .3s;
+            box-shadow: 0 4px 20px #00000060;
+            white-space: nowrap;
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--surface);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        /* ── Anims ── */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        /* ── Mobile ── */
+        @media(max-width:768px) {
+            .app {
+                flex-direction: column;
+            }
+
+            .header {
+                padding: 8px 10px;
+            }
+
+            .logo {
+                width: 28px;
+                height: 28px;
+                font-size: 15px;
+                border-radius: 7px;
+            }
+
+            h1 {
+                font-size: 13px;
+                margin-left: 8px;
+            }
+
+            .sidebar {
+                width: 100%;
+                min-width: 0;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .sb-head {
+                padding: 6px 10px;
+                font-size: 10px;
+            }
+
+            .sb-body {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 3px;
+                max-height: none;
+                padding: 5px;
+                overflow-y: auto;
+            }
+
+            .sec-label {
+                font-size: 8px;
+                padding: 3px 2px;
+                gap: 3px;
+            }
+
+            .sec-label::before {
+                width: 5px;
+                height: 5px;
+            }
+
+            .chip {
+                margin-bottom: 0;
+                padding: 5px 7px;
+                gap: 5px;
+                border-radius: 6px;
+            }
+
+            .av {
+                width: 22px;
+                height: 22px;
+                font-size: 10px;
+            }
+
+            .cn {
+                font-size: 11px;
+            }
+
+            .dh {
+                font-size: 11px;
+            }
+
+            .abs-btn {
+                width: 16px;
+                height: 16px;
+                font-size: 7px;
+            }
+
+            /* Guest section */
+            .g-section {
+                padding: 4px 6px;
+                gap: 4px;
+            }
+
+            .g-row {
+                gap: 3px;
+            }
+
+            .g-toggle {
+                width: 16px;
+                height: 16px;
+            }
+
+            .g-inp {
+                padding: 3px 4px;
+                font-size: 9px;
+                min-width: 0;
+            }
+
+            /* Absent section */
+            .absent-section {
+                padding: 4px 6px;
+                gap: 4px;
+            }
+
+            .absent-chips {
+                gap: 3px;
+                min-height: 20px;
+            }
+
+            .absent-chips:empty::after {
+                font-size: 9px;
+            }
+
+            /* Courts area */
+            .courts-area {
+                padding: 6px;
+            }
+
+            .ctrl {
+                gap: 4px;
+            }
+
+            .pl {
+                font-size: 9px;
+            }
+
+            .pbtn, .sbtn, .savebtn, .rbtn {
+                padding: 3px 7px;
+                font-size: 9px;
+                border-radius: 4px;
+            }
+
+            .grid {
+                gap: 6px;
+            }
+
+            .card {
+                min-height: 120px;
+                border-radius: 8px;
+                border-width: 1px;
+            }
+
+            .card.wide {
+                min-height: 130px;
+            }
+
+            .card-head {
+                padding: 5px 8px;
+                gap: 4px;
+            }
+
+            .cname {
+                font-size: 11px;
+                padding: 1px 2px;
+            }
+
+            .cnt {
+                font-size: 9px;
+                padding: 1px 5px;
+            }
+
+            .card-body {
+                padding: 5px;
+                gap: 3px;
+                min-height: 80px;
+            }
+
+            .drop-hint {
+                font-size: 9px;
+            }
+
+            .drop-hint div:first-child {
+                font-size: 16px;
+                margin-bottom: 2px;
+            }
+
+            /* Court members */
+            .cmem {
+                padding: 3px 6px;
+                gap: 4px;
+                border-radius: 5px;
+            }
+
+            .cmem .av {
+                width: 18px;
+                height: 18px;
+                font-size: 8px;
+            }
+
+            .cmem .cn {
+                font-size: 10px;
+            }
+
+            .delbtn {
+                width: 14px;
+                height: 14px;
+                font-size: 8px;
+            }
+
+            /* Pairs */
+            .pair-connector {
+                width: 20px;
+                min-width: 20px;
+                font-size: 9px;
+            }
+
+            .unpair-btn {
+                width: 18px;
+                height: 18px;
+                font-size: 8px;
+                top: -6px;
+                right: -6px;
+            }
+
+            .hstats {
+                display: none;
+            }
+
+            /* Toast & hints */
+            .toast {
+                font-size: 11px;
+                padding: 7px 12px;
+                bottom: 10px;
+                right: 10px;
+            }
+
+            .pair-hint {
+                font-size: 11px;
+                padding: 7px 14px;
+            }
+
+            .assign-bar {
+                padding: 6px 8px;
+                gap: 4px;
+            }
+
+            .assign-bar .ab-label {
+                font-size: 10px;
+            }
+
+            .assign-bar .ab-btn {
+                padding: 5px 8px;
+                font-size: 9px;
+            }
+
+            .assign-bar .ab-cancel {
+                padding: 4px 8px;
+                font-size: 9px;
+            }
+        }
+
+        /* ── Floating assign bar ── */
+        .assign-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border-top: 2px solid var(--accent);
+            padding: 10px 14px;
+            display: none;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            z-index: 400;
+            box-shadow: 0 -4px 20px #00000015;
+            animation: slideUp .2s ease;
+        }
+
+        .assign-bar.show {
+            display: flex;
+        }
+
+        .assign-bar .ab-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-right: 4px;
+        }
+
+        .assign-bar .ab-btn {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text);
+            cursor: pointer;
+            font-family: inherit;
+            transition: all .15s;
+        }
+
+        .assign-bar .ab-btn:active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        .assign-bar .ab-cancel {
+            margin-left: auto;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 5px 10px;
+            font-size: 11px;
+            color: var(--muted);
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        /* ── Court collapse handle (mobile) ── */
+        .court-handle {
+            display: none;
+        }
+
+        @media(max-width:768px) {
+            .courts-area {
+                transition: max-height 0.3s ease;
+                overflow: hidden;
+            }
+
+            .courts-area.collapsed {
+                max-height: 0 !important;
+                padding: 0 6px;
+                overflow: hidden;
+            }
+
+            .court-handle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                padding: 6px;
+                background: linear-gradient(135deg, #e8eef4, #f5f7fa);
+                border-top: 1px solid var(--border);
+                cursor: pointer;
+                touch-action: none;
+                user-select: none;
+            }
+
+            .court-handle .handle-bar {
+                width: 40px;
+                height: 4px;
+                background: var(--border);
+                border-radius: 2px;
+            }
+
+            .court-handle .handle-label {
+                font-size: 10px;
+                color: var(--muted);
+                font-weight: 700;
+            }
+
+            .court-handle .handle-arrow {
+                font-size: 10px;
+                color: var(--muted);
+                transition: transform 0.3s;
+            }
+
+            .court-handle.collapsed .handle-arrow {
+                transform: rotate(180deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ghost"></div>
+
+    <header class="header">
+        <div style="display:flex;align-items:center;">
+            <div class="logo">🏸</div>
+            <h1>コート振り分け</h1>
+        </div>
+        <div class="hstats">
+            <div class="badge">参加: <b id="totalC">0</b>名</div>
+            <div class="badge">未割当: <b id="unassC">0</b>名</div>
+        </div>
+    </header>
+
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- Guest section -->
+            <div class="g-section">
+                <div class="sec-label guest" style="flex-shrink:0;">🎟️ ゲスト</div>
+                <div id="guestArea" style="display:flex;gap:4px;flex:1;"></div>
+            </div>
+            <!-- Absent section -->
+            <div class="absent-section">
+                <div class="sec-label absent">🚫 欠席者</div>
+                <div class="absent-chips" id="absentArea"></div>
+            </div>
+            <div class="sb-head">👥 メンバー一覧</div>
+            <div class="sb-body" id="pool"></div>
+        </aside>
+
+        <!-- Court toggle handle (mobile) -->
+        <div class="court-handle" id="courtHandle" onclick="toggleCourts()">
+            <span class="handle-arrow">▼</span>
+            <span class="handle-label">コートエリア</span>
+            <div class="handle-bar"></div>
+        </div>
+
+        <!-- Courts -->
+        <main class="courts-area" id="courtsArea">
+            <div class="ctrl">
+                <span class="pl">コート設定:</span>
+                <button class="pbtn on" data-preset="0" onclick="applyPreset(0)">4コート</button>
+                <button class="pbtn" data-preset="1" onclick="applyPreset(1)">2コート（12人）</button>
+                <button class="pbtn" data-preset="2" onclick="applyPreset(2)">3コート（12人+6人×2）</button>
+                <button class="sbtn" onclick="swapCourts()">🔃 上下入替</button>
+                <button class="savebtn" onclick="saveState(true)">💾 保存</button>
+                <button class="sbtn" onclick="screenshotCourts()" style="background:#6366f1;color:#fff;">📸 撮影</button>
+                <button class="rbtn" onclick="resetAll()">🔄 リセット</button>
+            </div>
+            <div class="grid" id="grid"></div>
+        </main>
+    </div>
+
+    <!-- Pair hint banner -->
+    <div id="pairHint" class="pair-hint" style="display:none;"></div>
+
+    <!-- Floating assign bar -->
+    <div id="assignBar" class="assign-bar"></div>
+
+    <script>
+        // ── DATA ──────────────────────────────────────────────
+        const RAW = {
+            male: [                '大野', '唐澤', '北原', '越野', '小林', '善志',
+                '高橋', '張', '原', '平澤', 'バレ', '根津',
+                '細井', '松武', '宮澤輝', '渡辺'],
+            female: [                '濱島', '内田', '春日', '黒河内', '後藤', '下平',
+                '田中', '宮澤真', '宮下', '依田']
+        };
+
+        // Presets: each court {name, max, wide}
+        const PRESETS = [
+            // 0: 4コート (4 x 6)
+            [{ name: 'コートA', max: 6, wide: false }, { name: 'コートB', max: 6, wide: false },
+            { name: 'コートC', max: 6, wide: false }, { name: 'コートD', max: 6, wide: false }],
+            // 1: 2コート (2 x 12)
+            [{ name: 'コートA（2面）', max: 12, wide: true }, { name: 'コートB（2面）', max: 12, wide: true }],
+            // 2: 3コート (12人 + 6人×2)
+            [{ name: 'コートA（2面）', max: 12, wide: true },
+            { name: 'コートB', max: 6, wide: false }, { name: 'コートC', max: 6, wide: false }],
+        ];
+
+        // ペアの背景色（はっきり区別できる6色）
+        const PAIR_BG_COLORS = [
+            { bg: 'rgba(245, 158, 11, 0.25)', border: '#f59e0b', connector: '#f59e0b' },  // オレンジ
+            { bg: 'rgba(139, 92, 246, 0.25)', border: '#8b5cf6', connector: '#8b5cf6' },  // パープル
+            { bg: 'rgba(6, 182, 212, 0.25)', border: '#06b6d4', connector: '#06b6d4' },  // シアン
+            { bg: 'rgba(236, 72, 153, 0.25)', border: '#ec4899', connector: '#ec4899' },  // ピンク
+            { bg: 'rgba(132, 204, 22, 0.25)', border: '#84cc16', connector: '#84cc16' },  // ライム
+            { bg: 'rgba(249, 115, 22, 0.25)', border: '#f97316', connector: '#f97316' },  // ダークオレンジ
+        ];
+
+        // ── STATE ─────────────────────────────────────────────
+        let people = [];
+        let courts = [];   // {id, name, max, wide, pids:[], pairs:[[pidA,pidB],...]}
+        let guests = [];
+        let sel = [];       // selected person ids for tap-assign (multiple)
+        let pairSel = null; // selected person id for pairing (within court)
+        let currentPreset = 0;
+        const STORAGE_KEY = 'badminton_court_state_v1';
+
+        function initState() {
+            let n = 1;
+            people = [
+                ...RAW.male.map(name => ({ id: 'm' + (n++), name, gender: 'male', courtId: null, absent: false })),
+                ...RAW.female.map(name => ({ id: 'm' + (n++), name, gender: 'female', courtId: null, absent: false }))
+            ];
+            courts = PRESETS[0].map((p, i) => ({ id: 'c' + i, name: p.name, max: p.max, wide: p.wide, pids: [], pairs: [] }));
+            guests = [1, 2].map(i => ({ id: 'g' + i, name: '', enabled: false, courtId: null }));
+        }
+
+        function updatePresetButtons() {
+            document.querySelectorAll('.pbtn[data-preset]').forEach((b) => {
+                b.classList.toggle('on', b.dataset.preset === String(currentPreset));
+            });
+        }
+
+        function saveState(showToast = false) {
+            try {
+                const payload = {
+                    version: 1,
+                    savedAt: new Date().toISOString(),
+                    currentPreset,
+                    people,
+                    guests,
+                    courts
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+                if (showToast) toast('この端末にコート割を保存しました。');
+                return true;
+            } catch (err) {
+                console.error('Save failed:', err);
+                if (showToast) toast('保存に失敗しました。ブラウザの空き容量を確認してください。');
+                return false;
+            }
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return false;
+                const saved = JSON.parse(raw);
+                if (!saved || !Array.isArray(saved.people) || !Array.isArray(saved.guests) || !Array.isArray(saved.courts)) {
+                    return false;
+                }
+
+                people = saved.people
+                    .map(p => ({
+                        id: typeof p.id === 'string' ? p.id : '',
+                        name: typeof p.name === 'string' ? p.name : '',
+                        gender: p.gender === 'female' ? 'female' : (p.gender === 'male' ? 'male' : ''),
+                        courtId: typeof p.courtId === 'string' ? p.courtId : null,
+                        absent: !!p.absent
+                    }))
+                    .filter(p => p.id && (p.gender === 'male' || p.gender === 'female'));
+
+                guests = saved.guests
+                    .map(g => ({
+                        id: typeof g.id === 'string' ? g.id : '',
+                        name: typeof g.name === 'string' ? g.name : '',
+                        enabled: !!g.enabled,
+                        courtId: typeof g.courtId === 'string' ? g.courtId : null
+                    }))
+                    .filter(g => g.id.startsWith('g'));
+
+                currentPreset = Number.isInteger(saved.currentPreset) && PRESETS[saved.currentPreset]
+                    ? saved.currentPreset
+                    : 0;
+
+                courts = saved.courts.map((c, i) => ({
+                    id: typeof c.id === 'string' ? c.id : ('c' + i),
+                    name: typeof c.name === 'string' && c.name.trim() ? c.name : ('コート' + (i + 1)),
+                    max: Number.isInteger(c.max) && c.max > 0 ? c.max : 6,
+                    wide: !!c.wide,
+                    pids: Array.isArray(c.pids)
+                        ? [...new Set(c.pids.filter(pid => typeof pid === 'string'))]
+                        : [],
+                    pairs: Array.isArray(c.pairs)
+                        ? c.pairs
+                            .filter(pair =>
+                                Array.isArray(pair) &&
+                                pair.length === 2 &&
+                                typeof pair[0] === 'string' &&
+                                typeof pair[1] === 'string' &&
+                                pair[0] !== pair[1]
+                            )
+                            .map(pair => [pair[0], pair[1]])
+                        : []
+                }));
+
+                if (people.length === 0 || courts.length === 0) return false;
+
+                const validIds = new Set([...people, ...guests].map(p => p.id));
+                const used = new Set();
+                courts.forEach(c => {
+                    c.pids = c.pids.filter(pid => validIds.has(pid) && !used.has(pid)).slice(0, c.max);
+                    c.pids.forEach(pid => used.add(pid));
+                    const pidSet = new Set(c.pids);
+                    c.pairs = c.pairs.filter(([a, b]) => pidSet.has(a) && pidSet.has(b));
+                });
+
+                [...people, ...guests].forEach(p => { p.courtId = null; });
+                courts.forEach(c => {
+                    c.pids.forEach(pid => {
+                        const p = findPerson(pid);
+                        if (p) p.courtId = c.id;
+                    });
+                });
+
+                guests.forEach(g => {
+                    if (!g.enabled || !g.name.trim()) {
+                        g.courtId = null;
+                        courts.forEach(c => {
+                            c.pids = c.pids.filter(pid => pid !== g.id);
+                            c.pairs = c.pairs.filter(pair => !pair.includes(g.id));
+                        });
+                    }
+                });
+
+                sel = [];
+                clearPairSel();
+                updatePresetButtons();
+                return true;
+            } catch (err) {
+                console.error('Load failed:', err);
+                return false;
+            }
+        }
+
+        function findPerson(id) { return people.find(p => p.id === id) || guests.find(g => g.id === id); }
+
+        function assign(pid, courtId) {
+            const p = findPerson(pid);
+            if (!p) return false;
+            // エラーチェック: 欠席者はコートに割り当て不可
+            if (p.absent) {
+                toast(`${p.name}は欠席者です。復帰してから割り当ててください。`);
+                return false;
+            }
+            // エラーチェック: ゲストの名前が空
+            if (guests.includes(p) && (!p.name || !p.name.trim())) {
+                toast('ゲスト名を入力してください。');
+                return false;
+            }
+            const court = courts.find(c => c.id === courtId);
+            if (!court) return false;
+            // max超過は許容（ユーザーが手動で整理する前提）
+            // Remove from old court (including pairs)
+            removePidFromAllCourts(pid);
+            p.courtId = courtId;
+            court.pids.push(pid);
+            return true;
+        }
+
+        function removePidFromAllCourts(pid) {
+            courts.forEach(c => {
+                c.pids = c.pids.filter(id => id !== pid);
+                c.pairs = c.pairs.filter(pair => !pair.includes(pid));
+            });
+        }
+
+        function removeFromCourt(pid) {
+            removePidFromAllCourts(pid);
+            const p = findPerson(pid);
+            if (p) p.courtId = null;
+            sel = [];
+            clearPairSel();
+            render();
+        }
+
+        function applyPreset(i) {
+            currentPreset = i;
+            const oldCourts = courts;
+            const newCourts = PRESETS[i].map((p, j) => ({
+                id: 'c' + j, name: p.name, max: p.max, wide: p.wide, pids: [], pairs: []
+            }));
+
+            if (newCourts.length === 0) {
+                [...people, ...guests].forEach(p => p.courtId = null);
+                courts = newCourts;
+                updatePresetButtons();
+                clearPairSel();
+                render();
+                return;
+            }
+
+            // 旧コート → 新コートへメンバー・ペアを引き継ぎ（消えるコートはmodで合流）
+            oldCourts.forEach((oldC, oldIdx) => {
+                const newIdx = oldIdx < newCourts.length ? oldIdx : (oldIdx % newCourts.length);
+                const target = newCourts[newIdx];
+
+                oldC.pids.forEach(pid => {
+                    if (!target.pids.includes(pid)) target.pids.push(pid);
+                    const person = findPerson(pid);
+                    if (person) person.courtId = target.id;
+                });
+
+                oldC.pairs.forEach(pair => {
+                    const dup = target.pairs.some(pp =>
+                        (pp[0] === pair[0] && pp[1] === pair[1]) ||
+                        (pp[0] === pair[1] && pp[1] === pair[0])
+                    );
+                    if (!dup) target.pairs.push([...pair]);
+                });
+            });
+
+            courts = newCourts;
+            updatePresetButtons();
+            clearPairSel();
+            render();
+        }
+
+        function resetAll() {
+            [...people, ...guests].forEach(p => p.courtId = null);
+            courts.forEach(c => { c.pids = []; c.pairs = []; });
+            sel = [];
+            clearPairSel();
+            render();
+        }
+
+        // ── SWAP COURTS（全コート設定対応）──────────────────────
+        function swapCourts() {
+            // グリッドの行を判定（2カラムレイアウト）
+            const rows = [];
+            let currentRow = [];
+            let colsUsed = 0;
+            for (let i = 0; i < courts.length; i++) {
+                const width = courts[i].wide ? 2 : 1;
+                currentRow.push(i);
+                colsUsed += width;
+                if (colsUsed >= 2) {
+                    rows.push(currentRow);
+                    currentRow = [];
+                    colsUsed = 0;
+                }
+            }
+            if (currentRow.length > 0) rows.push(currentRow);
+
+            if (rows.length < 2) {
+                toast('入れ替えるコートがありません。');
+                return;
+            }
+
+            // 上半分と下半分を判定
+            const mid = Math.ceil(rows.length / 2);
+            const topIndices = rows.slice(0, mid).flat();
+            const bottomIndices = rows.slice(mid).flat();
+            // 新しい順序: 下 → 上
+            const newOrder = [...bottomIndices, ...topIndices];
+
+            // 全コートデータを保存
+            const savedData = courts.map(c => ({
+                name: c.name, max: c.max, wide: c.wide,
+                pids: [...c.pids], pairs: c.pairs.map(p => [...p])
+            }));
+
+            // 新しい順序でデータを適用
+            newOrder.forEach((oldIdx, newIdx) => {
+                const data = savedData[oldIdx];
+                courts[newIdx].name = data.name;
+                courts[newIdx].max = data.max;
+                courts[newIdx].wide = data.wide;
+                courts[newIdx].pids = data.pids;
+                courts[newIdx].pairs = data.pairs;
+                // courtIdを更新
+                data.pids.forEach(pid => {
+                    const p = findPerson(pid);
+                    if (p) p.courtId = courts[newIdx].id;
+                });
+            });
+
+            render();
+            toast('上段と下段のコートを入れ替えました！');
+        }
+
+        // ── ABSENT ────────────────────────────────────────────────
+        function markAbsent(pid) {
+            const p = findPerson(pid);
+            if (!p || guests.includes(p)) return;
+            removePidFromAllCourts(pid);
+            p.courtId = null;
+            p.absent = true;
+            sel = [];
+            clearPairSel();
+            render();
+        }
+
+        function markPresent(pid) {
+            const p = findPerson(pid);
+            if (!p) return;
+            p.absent = false;
+            render();
+        }
+
+        // ── PAIRING ───────────────────────────────────────────
+        function makePair(courtId, pidA, pidB) {
+            if (pidA === pidB) return;
+            const court = courts.find(c => c.id === courtId);
+            if (!court) return;
+            // Check not already paired
+            if (court.pairs.some(pair => pair.includes(pidA) || pair.includes(pidB))) {
+                toast('すでにペアになっています。解除してからペアを組んでください。');
+                return;
+            }
+            court.pairs.push([pidA, pidB]);
+            clearPairSel();
+            render();
+        }
+
+        function unpair(courtId, pairIndex) {
+            const court = courts.find(c => c.id === courtId);
+            if (!court) return;
+            court.pairs.splice(pairIndex, 1);
+            render();
+        }
+
+        function clearPairSel() {
+            pairSel = null;
+            document.getElementById('pairHint').style.display = 'none';
+        }
+
+        function getPairColorIdx(courtId, pairIdx) {
+            return pairIdx % PAIR_BG_COLORS.length;
+        }
+
+        // ── RENDER ────────────────────────────────────────────
+        function render() { renderPool(); renderAbsent(); renderCourts(); renderStats(); renderGuests(); }
+
+        function renderStats() {
+            const assigned = courts.reduce((s, c) => s + c.pids.length, 0);
+            const total = people.length + guests.filter(g => g.enabled && g.name).length;
+            document.getElementById('totalC').textContent = total;
+            document.getElementById('unassC').textContent = Math.max(0, total - assigned);
+        }
+
+        function renderPool() {
+            const el = document.getElementById('pool');
+            el.innerHTML = '';
+            const poolPeople = people.filter(p => !p.courtId && !p.absent);
+            const poolGuests = guests.filter(g => g.enabled && g.name && !g.courtId);
+
+            const malePool = poolPeople.filter(p => p.gender === 'male');
+            const femalePool = poolPeople.filter(p => p.gender === 'female');
+
+            if (malePool.length) {
+                el.appendChild(mkLabel('male', '男性'));
+                malePool.forEach(p => el.appendChild(mkChip(p)));
+            }
+            if (femalePool.length) {
+                el.appendChild(mkLabel('female', '女性'));
+                femalePool.forEach(p => el.appendChild(mkChip(p)));
+            }
+            if (poolGuests.length) {
+                el.appendChild(mkLabel('guest', 'ゲスト'));
+                poolGuests.forEach(g => el.appendChild(mkChip(g, 'guest')));
+            }
+        }
+
+        function renderAbsent() {
+            const el = document.getElementById('absentArea');
+            el.innerHTML = '';
+            const absentPeople = people.filter(p => p.absent);
+            absentPeople.forEach(p => {
+                const g = p.gender;
+                const d = document.createElement('div');
+                d.className = `chip absent-chip ${g}`;
+                d.dataset.id = p.id;
+                const returnBtn = `<button class="abs-btn to-return" title="復帰">↩</button>`;
+                d.innerHTML = `<div class="av">${p.name.charAt(0)}</div><div class="cn">${p.name}</div>${returnBtn}`;
+                d.querySelector('.abs-btn').addEventListener('click', e => {
+                    e.stopPropagation();
+                    markPresent(p.id);
+                });
+                el.appendChild(d);
+            });
+        }
+
+        function mkLabel(cls, txt) {
+            const d = document.createElement('div');
+            d.className = 'sec-label ' + cls;
+            d.textContent = txt;
+            return d;
+        }
+
+        function mkChip(p, forceGender) {
+            const g = forceGender || p.gender;
+            const d = document.createElement('div');
+            d.className = `chip ${g}`;
+            d.dataset.id = p.id;
+            if (sel.includes(p.id)) d.classList.add('selected');
+            // 男性・女性のみ欠席ボタンを表示（ゲストは対象外）
+            const absBtn = (!forceGender && (p.gender === 'male' || p.gender === 'female'))
+                ? `<button class="abs-btn to-absent" title="欠席">✕</button>`
+                : '';
+            d.innerHTML = `<div class="av">${p.name.charAt(0)}</div><div class="cn">${p.name}</div>${absBtn}<div class="dh">⠿</div>`;
+            const absBtnEl = d.querySelector('.abs-btn');
+            if (absBtnEl) {
+                absBtnEl.addEventListener('click', e => {
+                    e.stopPropagation();
+                    markAbsent(p.id);
+                });
+            }
+            d.addEventListener('click', () => onPoolClick(p.id));
+            setupDrag(d, p.id);
+            return d;
+        }
+
+        function renderGuests() {
+            const el = document.getElementById('guestArea');
+            el.innerHTML = '';
+            guests.forEach((g, i) => {
+                const row = document.createElement('div');
+                row.className = 'g-row';
+                const tog = document.createElement('div');
+                tog.className = 'g-toggle' + (g.enabled ? ' on' : '');
+                tog.addEventListener('click', () => toggleGuest(i));
+                const inp = document.createElement('input');
+                inp.type = 'text'; inp.className = 'g-inp';
+                inp.placeholder = `ゲスト${i + 1}の名前`;
+                inp.value = g.name; inp.disabled = !g.enabled;
+                inp.addEventListener('input', e => { guests[i].name = e.target.value; renderPool(); renderStats(); });
+                inp.addEventListener('change', () => { if (g.courtId) render(); });
+                row.appendChild(tog); row.appendChild(inp);
+                el.appendChild(row);
+            });
+        }
+
+        function toggleGuest(i) {
+            const g = guests[i];
+            g.enabled = !g.enabled;
+            if (!g.enabled) {
+                removePidFromAllCourts(g.id);
+                g.courtId = null;
+            }
+            render();
+        }
+
+        function renderCourts() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            courts.forEach((c, i) => {
+                const card = document.createElement('div');
+                const full = c.pids.length >= c.max;
+                card.className = 'card' + (full ? ' full' : '') + (c.wide ? ' wide' : '');
+                card.dataset.cid = c.id;
+
+                // Header
+                const head = document.createElement('div');
+                head.className = 'card-head';
+                const nameEl = document.createElement('input');
+                nameEl.type = 'text'; nameEl.className = 'cname'; nameEl.value = c.name;
+                nameEl.addEventListener('change', e => { courts[i].name = e.target.value; });
+
+                const maxLabel = document.createElement('span');
+                maxLabel.style.cssText = 'font-size:10px;color:var(--muted);margin-right:4px;';
+                maxLabel.textContent = c.wide ? '(2面)' : '(1面)';
+
+                const cntEl = document.createElement('div');
+                cntEl.className = 'cnt ' + (full ? 'full' : 'ok');
+                cntEl.textContent = `${c.pids.length}/${c.max}`;
+                head.appendChild(nameEl); head.appendChild(maxLabel); head.appendChild(cntEl);
+
+                // Body
+                const body = document.createElement('div');
+                body.className = 'card-body';
+                body.dataset.cid = c.id;
+                if (c.pids.length === 0) {
+                    body.innerHTML = `<div class="drop-hint"><div>🏸</div><div>ここにドロップ</div></div>`;
+                }
+
+                // Build: paired people first, then unpaired
+                const pairedPids = new Set();
+                c.pairs.forEach((pair, pairIdx) => {
+                    pair.forEach(pid => pairedPids.add(pid));
+                    const pA = findPerson(pair[0]);
+                    const pB = findPerson(pair[1]);
+                    if (pA && pB) {
+                        body.appendChild(mkPairGroup(pA, pB, c.id, pairIdx));
+                    }
+                });
+                c.pids.filter(pid => !pairedPids.has(pid)).forEach(pid => {
+                    const p = findPerson(pid);
+                    if (p) body.appendChild(mkCourtMem(p, c.id));
+                });
+
+                body.addEventListener('click', e => onCourtClick(c.id, e));
+
+                card.appendChild(head);
+                card.appendChild(body);
+                grid.appendChild(card);
+            });
+        }
+
+        function mkCourtMem(p, courtId) {
+            const g = p.gender || 'guest';
+            const d = document.createElement('div');
+            d.className = `cmem ${g}`;
+            d.dataset.id = p.id;
+            if (sel.includes(p.id)) d.classList.add('selected');
+            if (pairSel === p.id) d.classList.add('selected');
+            d.innerHTML = `<div class="av">${p.name.charAt(0)}</div><div class="cn">${p.name}</div><button class="delbtn">✕</button>`;
+            d.querySelector('.delbtn').addEventListener('click', e => { e.stopPropagation(); removeFromCourt(p.id); });
+            d.addEventListener('click', e => {
+                if (!e.target.classList.contains('delbtn')) onCourtMemClick(p.id, courtId);
+            });
+            setupDrag(d, p.id, courtId);
+            return d;
+        }
+
+        function mkPairGroup(pA, pB, courtId, pairIdx) {
+            const colorIdx = getPairColorIdx(courtId, pairIdx);
+            const pairColor = PAIR_BG_COLORS[colorIdx];
+            const wrapper = document.createElement('div');
+            wrapper.className = 'pair-group';
+            wrapper.style.borderColor = pairColor.border;
+            if (sel.includes(pA.id) && sel.includes(pB.id)) {
+                wrapper.classList.add('pair-selected');
+            }
+
+            const elA = mkCourtMem(pA, courtId);
+            elA.style.flex = '1';
+            elA.style.background = pairColor.bg;
+
+            const conn = document.createElement('div');
+            conn.className = 'pair-connector';
+            conn.style.background = pairColor.connector;
+            conn.style.cursor = 'pointer';
+            conn.textContent = '↔';
+            conn.title = 'ペアごと選択 → 別コートへ移動';
+            conn.addEventListener('click', e => {
+                e.stopPropagation();
+                e.preventDefault();
+                const pidA = pA.id;
+                const pidB = pB.id;
+                const bothSelected = sel.includes(pidA) && sel.includes(pidB);
+                if (bothSelected) {
+                    sel = sel.filter(s => s !== pidA && s !== pidB);
+                } else {
+                    if (!sel.includes(pidA)) sel.push(pidA);
+                    if (!sel.includes(pidB)) sel.push(pidB);
+                }
+                clearPairSel();
+                refreshSelection();
+                updateAssignBar();
+                wrapper.classList.toggle('pair-selected', sel.includes(pidA) && sel.includes(pidB));
+            });
+            conn.addEventListener('pointerdown', e => {
+                e.stopPropagation();
+            });
+
+            const elB = mkCourtMem(pB, courtId);
+            elB.style.flex = '1';
+            elB.style.background = pairColor.bg;
+
+            const unpairBtn = document.createElement('button');
+            unpairBtn.className = 'unpair-btn';
+            unpairBtn.textContent = '✕';
+            unpairBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                e.preventDefault();
+                unpair(courtId, pairIdx);
+            });
+            unpairBtn.addEventListener('pointerdown', e => {
+                e.stopPropagation(); // ドラッグ開始を防止
+            });
+
+            wrapper.appendChild(elA);
+            wrapper.appendChild(conn);
+            wrapper.appendChild(elB);
+            wrapper.appendChild(unpairBtn);
+            return wrapper;
+        }
+
+        // ── TAP INTERACTIONS ──────────────────────────────────
+        function onPoolClick(pid) {
+            clearPairSel();
+            // 複数選択: トグル
+            const idx = sel.indexOf(pid);
+            if (idx >= 0) {
+                sel.splice(idx, 1);
+            } else {
+                sel.push(pid);
+            }
+            refreshSelection();
+            updateAssignBar();
+        }
+
+        function updateAssignBar() {
+            const bar = document.getElementById('assignBar');
+            if (sel.length === 0) {
+                bar.classList.remove('show');
+                return;
+            }
+            bar.innerHTML = '';
+            // ラベル
+            const label = document.createElement('span');
+            label.className = 'ab-label';
+            label.textContent = `${sel.length}名選択中 →`;
+            bar.appendChild(label);
+            // 各コートボタン
+            courts.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = 'ab-btn';
+                const remaining = c.max - c.pids.length;
+                if (remaining > 0) {
+                    btn.textContent = `${c.name} (残${remaining})`;
+                } else if (remaining === 0) {
+                    btn.textContent = `${c.name} (満員)`;
+                    btn.style.opacity = '0.7';
+                } else {
+                    btn.textContent = `${c.name} (超過+${-remaining})`;
+                    btn.style.opacity = '0.7';
+                }
+                btn.addEventListener('click', () => {
+                    // 移動前：sel内のpid同士のペア関係を抽出
+                    const pairsToTransfer = [];
+                    courts.forEach(court => {
+                        court.pairs.forEach(pair => {
+                            if (sel.includes(pair[0]) && sel.includes(pair[1])) {
+                                pairsToTransfer.push([...pair]);
+                            }
+                        });
+                    });
+
+                    let count = 0;
+                    const toAssign = [...sel];
+                    toAssign.forEach(pid => {
+                        if (assign(pid, c.id)) count++;
+                    });
+
+                    // 移動先でペア再登録
+                    if (count > 0) {
+                        const targetCourt = courts.find(co => co.id === c.id);
+                        if (targetCourt) {
+                            pairsToTransfer.forEach(pair => {
+                                if (targetCourt.pids.includes(pair[0]) && targetCourt.pids.includes(pair[1])) {
+                                    const dup = targetCourt.pairs.some(pp =>
+                                        (pp[0] === pair[0] && pp[1] === pair[1]) ||
+                                        (pp[0] === pair[1] && pp[1] === pair[0])
+                                    );
+                                    if (!dup) targetCourt.pairs.push([...pair]);
+                                }
+                            });
+                        }
+                        sel = [];
+                        updateAssignBar();
+                        render();
+                        toast(`${count}名を${c.name}に割り当てました！`);
+                    }
+                });
+                bar.appendChild(btn);
+            });
+            // キャンセルボタン
+            const cancel = document.createElement('button');
+            cancel.className = 'ab-cancel';
+            cancel.textContent = '✕';
+            cancel.addEventListener('click', () => {
+                sel = [];
+                refreshSelection();
+                updateAssignBar();
+            });
+            bar.appendChild(cancel);
+            bar.classList.add('show');
+        }
+
+        function onCourtClick(courtId, e) {
+            if (e.target.closest('.cmem') || e.target.closest('.pair-group')) return;
+            if (sel.length > 0) {
+                let count = 0;
+                const toAssign = [...sel];
+                toAssign.forEach(pid => {
+                    if (!courts.find(c => c.id === courtId)?.pids.includes(pid)) {
+                        if (assign(pid, courtId)) count++;
+                    }
+                });
+                if (count > 0) {
+                    sel = [];
+                    render();
+                    toast(`${count}名を割り当てました！`);
+                }
+            }
+        }
+
+        function onCourtMemClick(pid, courtId) {
+            // If we have pool selections, assign to this court
+            if (sel.length > 0) {
+                let count = 0;
+                const toAssign = [...sel];
+                toAssign.forEach(spid => {
+                    if (!courts.find(c => c.id === courtId)?.pids.includes(spid)) {
+                        if (assign(spid, courtId)) count++;
+                    }
+                });
+                if (count > 0) {
+                    sel = [];
+                    render();
+                    toast(`${count}名を割り当てました！`);
+                    return;
+                }
+            }
+            sel = [];
+
+            // Pair mode: if same court, pair them
+            const court = courts.find(c => c.id === courtId);
+            if (!court) return;
+            if (!court.pids.includes(pid)) return;
+
+            // Already in a pair? skip
+            if (court.pairs.some(pair => pair.includes(pid))) {
+                clearPairSel();
+                refreshSelection();
+                return;
+            }
+
+            if (pairSel && pairSel !== pid) {
+                // Check pairSel is in same court
+                if (court.pids.includes(pairSel) && !court.pairs.some(pair => pair.includes(pairSel))) {
+                    makePair(courtId, pairSel, pid);
+                    return;
+                }
+            }
+            // Toggle pair selection
+            if (pairSel === pid) {
+                clearPairSel();
+            } else {
+                pairSel = pid;
+                const p = findPerson(pid);
+                const hint = document.getElementById('pairHint');
+                hint.textContent = `🤝 ${p ? p.name : ''} のペア相手をタップしてください`;
+                hint.style.display = 'block';
+            }
+            refreshSelection();
+        }
+
+        function refreshSelection() {
+            document.querySelectorAll('[data-id]').forEach(el => {
+                const isSelected = sel.includes(el.dataset.id) || el.dataset.id === pairSel;
+                el.classList.toggle('selected', isSelected);
+            });
+        }
+
+        // ── DRAG & DROP (Pointer Events) ───────────────────────
+        let drag = { pid: null, fromCourt: null, active: false, startX: 0, startY: 0 };
+        const ghost = document.getElementById('ghost');
+
+        function setupDrag(el, pid, fromCourt) {
+            el.addEventListener('pointerdown', e => {
+                if (e.target.closest('.delbtn') || e.target.closest('.cname') ||
+                    e.target.closest('.g-toggle') || e.target.closest('.g-inp') ||
+                    e.target.closest('.unpair-btn') || e.target.closest('.abs-btn')) return;
+                drag = { pid, fromCourt: fromCourt || null, active: false, startX: e.clientX, startY: e.clientY };
+            }, { passive: true });
+        }
+
+        document.addEventListener('pointermove', e => {
+            if (!drag.pid) return;
+            const dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
+            if (!drag.active && Math.sqrt(dx * dx + dy * dy) > 8) {
+                drag.active = true;
+                const p = findPerson(drag.pid);
+                if (p) { ghost.textContent = '🏸 ' + p.name; ghost.style.display = 'block'; }
+                const src = document.querySelector(`[data-id="${drag.pid}"]`);
+                if (src) src.classList.add('dragging');
+            }
+            if (!drag.active) return;
+            ghost.style.left = (e.clientX - 40) + 'px';
+            ghost.style.top = (e.clientY - 24) + 'px';
+
+            ghost.style.display = 'none';
+            const under = document.elementFromPoint(e.clientX, e.clientY);
+            ghost.style.display = 'block';
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('hover'));
+            const cc = under?.closest('.card');
+            if (cc && !cc.classList.contains('full')) cc.classList.add('hover');
+        }, { passive: true });
+
+        document.addEventListener('pointerup', e => {
+            if (!drag.pid) return;
+            if (drag.active) {
+                ghost.style.display = 'none';
+                document.querySelectorAll('.card').forEach(c => c.classList.remove('hover'));
+                const under = document.elementFromPoint(e.clientX, e.clientY);
+                const cc = under?.closest('.card');
+
+                // Check if dropped on another court member (for pairing)
+                const targetMem = under?.closest('.cmem');
+                if (targetMem && drag.fromCourt) {
+                    const targetPid = targetMem.dataset.id;
+                    const court = courts.find(c => c.id === drag.fromCourt);
+                    if (court && targetPid !== drag.pid &&
+                        court.pids.includes(targetPid) && court.pids.includes(drag.pid) &&
+                        !court.pairs.some(p => p.includes(drag.pid)) &&
+                        !court.pairs.some(p => p.includes(targetPid))) {
+                        makePair(drag.fromCourt, drag.pid, targetPid);
+                        document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+                        drag.pid = null;
+                        drag.active = false;
+                        return;
+                    }
+                }
+
+                if (cc) {
+                    const toId = cc.dataset.cid;
+                    if (toId && toId !== drag.fromCourt) {
+                        if (drag.fromCourt) {
+                            removePidFromAllCourts(drag.pid);
+                            const p = findPerson(drag.pid);
+                            if (p) p.courtId = null;
+                        }
+                        assign(drag.pid, toId);
+                        render();
+                    }
+                }
+                document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+            }
+            drag.pid = null;
+            drag.active = false;
+        });
+
+        document.addEventListener('pointercancel', () => {
+            ghost.style.display = 'none';
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('hover'));
+            document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+            drag.pid = null; drag.active = false;
+        });
+
+        // ── TOAST ──────────────────────────────────────────────
+        function toast(msg) {
+            const t = document.createElement('div');
+            t.className = 'toast'; t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        // ── SCREENSHOT ────────────────────────────────────────
+        function screenshotCourts() {
+            const grid = document.getElementById('grid');
+            if (!grid || grid.children.length === 0) {
+                toast('コートにメンバーを配置してから撮影してください。');
+                return;
+            }
+            toast('📸 撮影中...');
+
+            // 一時的にグリッドを広げて見切れを防止
+            const courtsArea = document.getElementById('courtsArea');
+            const body = document.body;
+            const savedOverflowBody = body.style.overflowX;
+            const savedOverflowCourts = courtsArea.style.overflow;
+            const savedMinWidth = grid.style.minWidth;
+            const savedWidth = courtsArea.style.width;
+            body.style.overflowX = 'visible';
+            courtsArea.style.overflow = 'visible';
+            courtsArea.style.width = 'max-content';
+            grid.style.minWidth = '700px';
+
+            html2canvas(grid, {
+                backgroundColor: '#ffffff',
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                windowWidth: Math.max(grid.scrollWidth, 700) + 40,
+            }).then(canvas => {
+                body.style.overflowX = savedOverflowBody;
+                courtsArea.style.overflow = savedOverflowCourts;
+                courtsArea.style.width = savedWidth;
+                grid.style.minWidth = savedMinWidth;
+                canvas.toBlob(blob => {
+                    if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
+                        const file = new File([blob], 'court.png', { type: 'image/png' });
+                        navigator.share({ files: [file], title: 'コート振り分け' }).catch(() => {
+                            downloadBlob(blob);
+                        });
+                    } else {
+                        downloadBlob(blob);
+                    }
+                }, 'image/png');
+            }).catch(() => {
+                body.style.overflowX = savedOverflowBody;
+                courtsArea.style.overflow = savedOverflowCourts;
+                courtsArea.style.width = savedWidth;
+                grid.style.minWidth = savedMinWidth;
+                toast('撮影に失敗しました。');
+            });
+        }
+
+        function downloadBlob(blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'court_' + new Date().toISOString().slice(0, 10) + '.png';
+            a.click();
+            URL.revokeObjectURL(url);
+            toast('📸 保存しました！');
+        }
+
+        // ── COURT TOGGLE (mobile) ────────────────────────────
+        let courtsCollapsed = false;
+
+        function toggleCourts() {
+            courtsCollapsed = !courtsCollapsed;
+            const area = document.getElementById('courtsArea');
+            const handle = document.getElementById('courtHandle');
+            if (courtsCollapsed) {
+                area.classList.add('collapsed');
+                handle.classList.add('collapsed');
+                handle.querySelector('.handle-label').textContent = 'コートを表示';
+            } else {
+                area.classList.remove('collapsed');
+                handle.classList.remove('collapsed');
+                handle.querySelector('.handle-label').textContent = 'コートエリア';
+            }
+        }
+
+        // ── START ──────────────────────────────────────────────
+        initState();
+        if (loadState()) {
+            toast('前回保存したコート割を復元しました。');
+        }
+        render();
+    </script>
+</body>
+
+</html>
