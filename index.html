@@ -1812,6 +1812,7 @@
             conn.addEventListener('click', e => {
                 e.stopPropagation();
                 e.preventDefault();
+                if (justDragged) return;
                 const pidA = pA.id;
                 const pidB = pB.id;
                 const bothSelected = sel.includes(pidA) && sel.includes(pidB);
@@ -1828,7 +1829,15 @@
             });
             conn.addEventListener('pointerdown', e => {
                 e.stopPropagation();
-            });
+                drag = {
+                    pid: pA.id,
+                    pairPids: [pA.id, pB.id],
+                    fromCourt: courtId,
+                    active: false,
+                    startX: e.clientX,
+                    startY: e.clientY
+                };
+            }, { passive: true });
 
             const elB = mkCourtMem(pB, courtId);
             elB.style.flex = '1';
@@ -2022,7 +2031,8 @@
         }
 
         // ── DRAG & DROP (Pointer Events) ───────────────────────
-        let drag = { pid: null, fromCourt: null, active: false, startX: 0, startY: 0 };
+        let drag = { pid: null, pairPids: null, fromCourt: null, active: false, startX: 0, startY: 0 };
+        let justDragged = false; // ドラッグ直後のclickをsuppress
         const ghost = document.getElementById('ghost');
 
         function setupDrag(el, pid, fromCourt) {
@@ -2039,10 +2049,21 @@
             const dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
             if (!drag.active && Math.sqrt(dx * dx + dy * dy) > 8) {
                 drag.active = true;
-                const p = findPerson(drag.pid);
-                if (p) { ghost.textContent = '🏸 ' + p.name; ghost.style.display = 'block'; }
-                const src = document.querySelector(`[data-id="${drag.pid}"]`);
-                if (src) src.classList.add('dragging');
+                if (drag.pairPids) {
+                    const pA = findPerson(drag.pairPids[0]);
+                    const pB = findPerson(drag.pairPids[1]);
+                    ghost.textContent = `🤝 ${pA ? pA.name : ''} & ${pB ? pB.name : ''}`;
+                    ghost.style.display = 'block';
+                    drag.pairPids.forEach(pid => {
+                        const src = document.querySelector(`[data-id="${pid}"]`);
+                        if (src) src.classList.add('dragging');
+                    });
+                } else {
+                    const p = findPerson(drag.pid);
+                    if (p) { ghost.textContent = '🏸 ' + p.name; ghost.style.display = 'block'; }
+                    const src = document.querySelector(`[data-id="${drag.pid}"]`);
+                    if (src) src.classList.add('dragging');
+                }
             }
             if (!drag.active) return;
             ghost.style.left = (e.clientX - 40) + 'px';
@@ -2059,10 +2080,40 @@
         document.addEventListener('pointerup', e => {
             if (!drag.pid) return;
             if (drag.active) {
+                justDragged = true;
+                setTimeout(() => { justDragged = false; }, 100);
                 ghost.style.display = 'none';
                 document.querySelectorAll('.card').forEach(c => c.classList.remove('hover'));
                 const under = document.elementFromPoint(e.clientX, e.clientY);
                 const cc = under?.closest('.card');
+
+                // ペアごと移動
+                if (drag.pairPids) {
+                    if (cc) {
+                        const toId = cc.dataset.cid;
+                        if (toId && toId !== drag.fromCourt) {
+                            const [pidA, pidB] = drag.pairPids;
+                            assign(pidA, toId);
+                            assign(pidB, toId);
+                            // 移動先でペア再登録
+                            const targetCourt = courts.find(co => co.id === toId);
+                            if (targetCourt && targetCourt.pids.includes(pidA) && targetCourt.pids.includes(pidB)) {
+                                const dup = targetCourt.pairs.some(pp =>
+                                    (pp[0] === pidA && pp[1] === pidB) ||
+                                    (pp[0] === pidB && pp[1] === pidA)
+                                );
+                                if (!dup) targetCourt.pairs.push([pidA, pidB]);
+                            }
+                            render();
+                            toast(`ペアをコート移動しました`);
+                        }
+                    }
+                    document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+                    drag.pid = null;
+                    drag.pairPids = null;
+                    drag.active = false;
+                    return;
+                }
 
                 // Check if dropped on another court member (for pairing)
                 const targetMem = under?.closest('.cmem');
@@ -2096,6 +2147,7 @@
                 document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
             }
             drag.pid = null;
+            drag.pairPids = null;
             drag.active = false;
         });
 
@@ -2103,7 +2155,7 @@
             ghost.style.display = 'none';
             document.querySelectorAll('.card').forEach(c => c.classList.remove('hover'));
             document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
-            drag.pid = null; drag.active = false;
+            drag.pid = null; drag.pairPids = null; drag.active = false;
         });
 
         // ── TOAST ──────────────────────────────────────────────
