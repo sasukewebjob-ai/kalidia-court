@@ -314,8 +314,11 @@
 
         /* ── Tournament pair section ── */
         .tp-section {
-            border-top: 1px solid var(--border);
+            border: 1px solid #fed7aa;
+            border-radius: 12px;
             background: #fff7ed;
+            margin-top: 4px;
+            overflow: hidden;
         }
 
         .tp-summary {
@@ -1480,26 +1483,6 @@
                 <div class="sec-label absent">🚫 欠席者</div>
                 <div class="absent-chips" id="absentArea"></div>
             </div>
-            <!-- Tournament pair section -->
-            <details class="tp-section" id="tpSection">
-                <summary class="tp-summary">
-                    <span class="tp-summary-label" id="tpTitle">🏆 大会ペア</span>
-                    <button class="tp-edit-name" id="tpEditNameBtn" title="大会名を編集">✏️</button>
-                    <span class="tp-count" id="tpCount">0組</span>
-                </summary>
-                <div class="tp-body">
-                    <div class="tp-list" id="tpList"></div>
-                    <div class="tp-add">
-                        <select class="tp-sel" id="tpSelA"><option value="">選手A</option></select>
-                        <select class="tp-sel" id="tpSelB"><option value="">選手B</option></select>
-                        <button class="tp-add-btn" id="tpAddBtn">+</button>
-                    </div>
-                    <div class="tp-actions">
-                        <button class="tp-apply" id="tpApplyBtn">🏆 大会ペアを適用</button>
-                        <button class="tp-release" id="tpReleaseBtn" title="出場中の大会ペアをすべて解除">解除</button>
-                    </div>
-                </div>
-            </details>
             <div class="sb-head">👥 メンバー一覧</div>
             <div class="sb-body" id="pool"></div>
         </aside>
@@ -1524,6 +1507,27 @@
                 <button class="rbtn" onclick="resetAll()">🔄 リセット</button>
             </div>
             <div class="grid" id="grid"></div>
+
+            <!-- Tournament pair section（コート割の下に配置） -->
+            <details class="tp-section" id="tpSection">
+                <summary class="tp-summary">
+                    <span class="tp-summary-label" id="tpTitle">🏆 大会ペア</span>
+                    <button class="tp-edit-name" id="tpEditNameBtn" title="大会名を編集">✏️</button>
+                    <span class="tp-count" id="tpCount">0組</span>
+                </summary>
+                <div class="tp-body">
+                    <div class="tp-list" id="tpList"></div>
+                    <div class="tp-add">
+                        <select class="tp-sel" id="tpSelA"><option value="">選手A</option></select>
+                        <select class="tp-sel" id="tpSelB"><option value="">選手B</option></select>
+                        <button class="tp-add-btn" id="tpAddBtn">+</button>
+                    </div>
+                    <div class="tp-actions">
+                        <button class="tp-apply" id="tpApplyBtn">🏆 大会ペアを適用</button>
+                        <button class="tp-release" id="tpReleaseBtn" title="出場中の大会ペアをすべて解除">解除</button>
+                    </div>
+                </div>
+            </details>
         </main>
     </div>
 
