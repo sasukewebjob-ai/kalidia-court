@@ -11,9 +11,12 @@
 
 ```
 KALIDIAコート割/
-├── index.html          # アプリ本体（CSS・JS全込み、約66KB）
+├── index.html          # アプリ本体（CSS・JS全込み）
 ├── members.txt         # メンバーリスト（編集はここだけ）
-└── update_members.py   # members.txt → index.html を同期するスクリプト
+├── update_members.py   # members.txt → index.html を同期するスクリプト
+├── manifest.json       # PWAマニフェスト
+├── service-worker.js   # オフライン対応キャッシュ
+└── icon.svg            # アプリアイコン
 ```
 
 ---
@@ -64,6 +67,8 @@ KALIDIAコート割/
 | 状態保存 | `localStorage`（キー: `badminton_court_state_v1`）に自動保存 |
 | スクリーンショット | html2canvas でコート画面を画像として保存 |
 | プリセット切替 | ボタンでコート構成を即切替 |
+| 大会ペア管理 | シーズン中固定ペアを永続登録（キー: `badminton_tournament_pairs_v1`）・適用/解除ボタンで一括反映、欠席者を含むペアは自動スキップ |
+| PWA対応 | オフライン動作・ホーム画面追加（manifest.json + service-worker.js） |
 
 ---
 
@@ -93,17 +98,22 @@ KALIDIAコート割/
 | `render()` | 画面全体を再描画 |
 | `screenshotCourts()` | コートのスクリーンショットを保存 |
 | `toggleCourts()` | サイドバー表示/非表示 |
+| `addTournamentPair() / removeTournamentPair()` | 大会ペアの追加・削除（永続） |
+| `applyTournamentPairs()` | 出席している大会ペアを一括でコート配置＋ペア化（欠席含むペアはスキップ） |
+| `releaseTournamentPairs()` | 適用中の大会ペアをコートから一括解除 |
+| `renderTournamentPairs()` | 大会ペアUIの再描画（一覧・選択ドロップダウン） |
 
 ---
 
 ## 状態管理
 
 ```js
-let people = [];    // 参加者リスト {id, name, gender, courtId, absent}
-let courts = [];    // コートリスト {id, name, max, wide, pids[], pairs[]}
-let guests = [];    // ゲスト {id, name, enabled, courtId}
-let sel = [];       // タップ選択中の参加者ID（複数可）
-let pairSel = null; // ペア選択中の参加者ID
+let people = [];          // 参加者リスト {id, name, gender, courtId, absent}
+let courts = [];          // コートリスト {id, name, max, wide, pids[], pairs[]}
+let guests = [];          // ゲスト {id, name, enabled, courtId}
+let sel = [];             // タップ選択中の参加者ID（複数可）
+let pairSel = null;       // ペア選択中の参加者ID
+let tournamentPairs = []; // 大会ペア {id, pidA, pidB} シーズン永続
 ```
 
 ---

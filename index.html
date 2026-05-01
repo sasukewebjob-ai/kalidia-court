@@ -3,8 +3,16 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>🏸 バドミントン コート振り分け</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#059669">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="コート割">
+    <meta name="mobile-web-app-capable" content="yes">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -24,7 +32,7 @@
             --accent: #059669;
             --accent2: #047857;
             --male: #2563eb;
-            --female: #db2777;
+            --female: #be185d;
             --guest: #d97706;
             --text: #1e293b;
             --muted: #64748b;
@@ -182,7 +190,7 @@
         }
 
         .chip.female {
-            border-color: #db277730;
+            border-color: #be185d30;
         }
 
         .chip.guest {
@@ -223,7 +231,7 @@
         }
 
         .female .av {
-            background: #db277718;
+            background: #be185d18;
             color: var(--female);
         }
 
@@ -302,6 +310,192 @@
 
         .g-inp:disabled {
             opacity: .35;
+        }
+
+        /* ── Tournament pair section ── */
+        .tp-section {
+            border-top: 1px solid var(--border);
+            background: #fff7ed;
+        }
+
+        .tp-summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #b45309;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 44px;
+        }
+
+        .tp-summary::-webkit-details-marker { display: none; }
+
+        .tp-summary::after {
+            content: '▼';
+            margin-left: auto;
+            font-size: 9px;
+            transition: transform .2s;
+        }
+
+        .tp-section[open] .tp-summary::after {
+            transform: rotate(180deg);
+        }
+
+        .tp-summary-label {
+            flex-shrink: 0;
+        }
+
+        .tp-count {
+            font-size: 10px;
+            font-weight: 700;
+            color: #b45309;
+            background: #fed7aa;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .tp-body {
+            padding: 8px 12px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-top: 1px solid #fed7aa;
+        }
+
+        .tp-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .tp-list:empty::after {
+            content: 'まだ大会ペアが登録されていません';
+            font-size: 10px;
+            color: var(--muted);
+            padding: 4px 0;
+        }
+
+        .tp-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+            background: #fff;
+            border: 1px solid #fed7aa;
+            border-radius: 6px;
+            font-size: 11px;
+        }
+
+        .tp-item-names {
+            flex: 1;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .tp-del {
+            min-width: 44px;
+            min-height: 44px;
+            width: 44px;
+            height: 44px;
+            border: none;
+            background: transparent;
+            color: var(--red);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: -10px -8px -10px 0;
+        }
+
+        .tp-del:hover {
+            background: #fee2e2;
+        }
+
+        .tp-add {
+            display: flex;
+            gap: 4px;
+            align-items: stretch;
+        }
+
+        .tp-sel {
+            flex: 1;
+            min-height: 36px;
+            padding: 4px 6px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #fff;
+            font-size: 11px;
+            font-family: inherit;
+            color: var(--text);
+            min-width: 0;
+        }
+
+        .tp-add-btn {
+            min-width: 44px;
+            min-height: 36px;
+            padding: 4px 10px;
+            border: 1px solid #f59e0b;
+            background: #fef3c7;
+            color: #b45309;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 900;
+            font-family: inherit;
+        }
+
+        .tp-add-btn:active {
+            background: #f59e0b;
+            color: #fff;
+        }
+
+        .tp-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .tp-apply {
+            flex: 1;
+            min-height: 44px;
+            padding: 8px 10px;
+            border: 1px solid #f59e0b;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: inherit;
+        }
+
+        .tp-apply:active {
+            transform: translateY(1px);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,.15);
+        }
+
+        .tp-release {
+            min-height: 44px;
+            min-width: 60px;
+            padding: 8px 10px;
+            border: 1px solid #fed7aa;
+            background: #fff;
+            color: #b45309;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: inherit;
+        }
+
+        .tp-release:active {
+            background: #fef3c7;
         }
 
         /* ── Courts area ── */
@@ -467,6 +661,29 @@
 
         .abs-btn:hover {
             transform: scale(1.2);
+        }
+
+        /* タップ判定を44px以上に拡張（見た目はそのまま） */
+        .abs-btn,
+        .delbtn,
+        .unpair-btn,
+        .g-toggle {
+            position: relative;
+        }
+
+        .abs-btn::before,
+        .delbtn::before,
+        .unpair-btn::before,
+        .g-toggle::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 44px;
+            height: 44px;
+            min-width: 100%;
+            min-height: 100%;
         }
 
         @media (hover: none) {
@@ -880,9 +1097,9 @@
             }
 
             .abs-btn {
-                width: 16px;
-                height: 16px;
-                font-size: 7px;
+                width: 22px;
+                height: 22px;
+                font-size: 9px;
             }
 
             /* Guest section */
@@ -935,9 +1152,10 @@
             }
 
             .pbtn, .sbtn, .savebtn, .rbtn {
-                padding: 3px 7px;
-                font-size: 9px;
-                border-radius: 4px;
+                padding: 6px 10px;
+                font-size: 10px;
+                border-radius: 5px;
+                min-height: 32px;
             }
 
             .grid {
@@ -1002,9 +1220,9 @@
             }
 
             .delbtn {
-                width: 14px;
-                height: 14px;
-                font-size: 8px;
+                width: 22px;
+                height: 22px;
+                font-size: 10px;
             }
 
             /* Pairs */
@@ -1207,6 +1425,25 @@
                 <div class="sec-label absent">🚫 欠席者</div>
                 <div class="absent-chips" id="absentArea"></div>
             </div>
+            <!-- Tournament pair section -->
+            <details class="tp-section" id="tpSection">
+                <summary class="tp-summary">
+                    <span class="tp-summary-label">🏆 大会ペア</span>
+                    <span class="tp-count" id="tpCount">0組</span>
+                </summary>
+                <div class="tp-body">
+                    <div class="tp-list" id="tpList"></div>
+                    <div class="tp-add">
+                        <select class="tp-sel" id="tpSelA"><option value="">選手A</option></select>
+                        <select class="tp-sel" id="tpSelB"><option value="">選手B</option></select>
+                        <button class="tp-add-btn" id="tpAddBtn">+</button>
+                    </div>
+                    <div class="tp-actions">
+                        <button class="tp-apply" id="tpApplyBtn">🏆 大会ペアを適用</button>
+                        <button class="tp-release" id="tpReleaseBtn" title="出場中の大会ペアをすべて解除">解除</button>
+                    </div>
+                </div>
+            </details>
             <div class="sb-head">👥 メンバー一覧</div>
             <div class="sb-body" id="pool"></div>
         </aside>
@@ -1279,7 +1516,9 @@
         let sel = [];       // selected person ids for tap-assign (multiple)
         let pairSel = null; // selected person id for pairing (within court)
         let currentPreset = 0;
+        let tournamentPairs = []; // [{id, pidA, pidB}] シーズン中ずっと永続
         const STORAGE_KEY = 'badminton_court_state_v1';
+        const TOURNAMENT_KEY = 'badminton_tournament_pairs_v1';
 
         function initState() {
             let n = 1;
@@ -1410,6 +1649,176 @@
         }
 
         function findPerson(id) { return people.find(p => p.id === id) || guests.find(g => g.id === id); }
+
+        // ── 大会ペア（シーズン永続） ──────────────────────────
+        function saveTournamentPairs() {
+            try {
+                localStorage.setItem(TOURNAMENT_KEY, JSON.stringify({ version: 1, tournamentPairs }));
+                return true;
+            } catch (err) {
+                console.error('TournamentPairs save failed:', err);
+                return false;
+            }
+        }
+
+        function loadTournamentPairs() {
+            try {
+                const raw = localStorage.getItem(TOURNAMENT_KEY);
+                if (!raw) return false;
+                const saved = JSON.parse(raw);
+                if (!saved || !Array.isArray(saved.tournamentPairs)) return false;
+                tournamentPairs = saved.tournamentPairs
+                    .filter(tp => tp && typeof tp.pidA === 'string' && typeof tp.pidB === 'string' && tp.pidA !== tp.pidB)
+                    .map(tp => ({
+                        id: typeof tp.id === 'string' ? tp.id : ('tp' + Math.random().toString(36).slice(2, 8)),
+                        pidA: tp.pidA,
+                        pidB: tp.pidB
+                    }));
+                return true;
+            } catch (err) {
+                console.error('TournamentPairs load failed:', err);
+                return false;
+            }
+        }
+
+        function addTournamentPair(pidA, pidB) {
+            if (!pidA || !pidB || pidA === pidB) {
+                toast('同じ選手はペアにできません。');
+                return false;
+            }
+            const pA = people.find(p => p.id === pidA);
+            const pB = people.find(p => p.id === pidB);
+            if (!pA || !pB) {
+                toast('選手が見つかりません。');
+                return false;
+            }
+            const dup = tournamentPairs.some(tp =>
+                (tp.pidA === pidA && tp.pidB === pidB) ||
+                (tp.pidA === pidB && tp.pidB === pidA)
+            );
+            if (dup) {
+                toast('すでに登録済みのペアです。');
+                return false;
+            }
+            const conflict = tournamentPairs.find(tp =>
+                tp.pidA === pidA || tp.pidB === pidA || tp.pidA === pidB || tp.pidB === pidB
+            );
+            if (conflict) {
+                const cA = findPerson(conflict.pidA);
+                const cB = findPerson(conflict.pidB);
+                toast(`${cA ? cA.name : '?'} - ${cB ? cB.name : '?'} のペアと重複しています。先に解除してください。`);
+                return false;
+            }
+            tournamentPairs.push({
+                id: 'tp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                pidA, pidB
+            });
+            saveTournamentPairs();
+            renderTournamentPairs();
+            toast(`🏆 ${pA.name} - ${pB.name} を大会ペアに追加`);
+            return true;
+        }
+
+        function removeTournamentPair(tpId) {
+            const before = tournamentPairs.length;
+            tournamentPairs = tournamentPairs.filter(tp => tp.id !== tpId);
+            if (tournamentPairs.length !== before) {
+                saveTournamentPairs();
+                renderTournamentPairs();
+            }
+        }
+
+        function applyTournamentPairs() {
+            if (tournamentPairs.length === 0) {
+                toast('大会ペアが登録されていません。');
+                return;
+            }
+            let applied = 0, skippedAbsent = 0, skippedNoSpace = 0;
+
+            for (const tp of tournamentPairs) {
+                const pA = people.find(p => p.id === tp.pidA);
+                const pB = people.find(p => p.id === tp.pidB);
+                if (!pA || !pB) continue;
+
+                // 欠席者を含むペアは完全スキップ（出席している片方は通常メンバーとして残す）
+                if (pA.absent || pB.absent) {
+                    skippedAbsent++;
+                    continue;
+                }
+
+                // 配置先コートを決定
+                let targetCourt = null;
+                if (pA.courtId && pA.courtId === pB.courtId) {
+                    targetCourt = courts.find(c => c.id === pA.courtId);
+                } else if (pA.courtId && !pB.courtId) {
+                    targetCourt = courts.find(c => c.id === pA.courtId);
+                } else if (pB.courtId && !pA.courtId) {
+                    targetCourt = courts.find(c => c.id === pB.courtId);
+                } else if (pA.courtId && pB.courtId) {
+                    const cA = courts.find(c => c.id === pA.courtId);
+                    const cB = courts.find(c => c.id === pB.courtId);
+                    targetCourt = cA.pids.length <= cB.pids.length ? cA : cB;
+                } else {
+                    // 両方プール → 空きが最大のコートへ
+                    targetCourt = courts.reduce((best, c) => {
+                        const space = c.max - c.pids.length;
+                        if (!best) return c;
+                        const bestSpace = best.max - best.pids.length;
+                        return space > bestSpace ? c : best;
+                    }, null);
+                }
+
+                if (!targetCourt) {
+                    skippedNoSpace++;
+                    continue;
+                }
+
+                // 既存配置・ペアから両者を一旦剥がす
+                courts.forEach(c => {
+                    c.pids = c.pids.filter(id => id !== pA.id && id !== pB.id);
+                    c.pairs = c.pairs.filter(pair => !pair.includes(pA.id) && !pair.includes(pB.id));
+                });
+
+                // targetCourt に配置 + ペア登録
+                targetCourt.pids.push(pA.id, pB.id);
+                pA.courtId = targetCourt.id;
+                pB.courtId = targetCourt.id;
+                targetCourt.pairs.push([pA.id, pB.id]);
+                applied++;
+            }
+
+            saveState();
+            render();
+
+            let msg = `🏆 大会ペア ${applied}組を適用`;
+            const notes = [];
+            if (skippedAbsent > 0) notes.push(`欠席で${skippedAbsent}組スキップ`);
+            if (skippedNoSpace > 0) notes.push(`空き不足で${skippedNoSpace}組スキップ`);
+            if (notes.length) msg += `（${notes.join('、')}）`;
+            toast(msg);
+        }
+
+        function releaseTournamentPairs() {
+            let removed = 0;
+            courts.forEach(c => {
+                const before = c.pairs.length;
+                c.pairs = c.pairs.filter(pair => {
+                    const isTP = tournamentPairs.some(tp =>
+                        (tp.pidA === pair[0] && tp.pidB === pair[1]) ||
+                        (tp.pidA === pair[1] && tp.pidB === pair[0])
+                    );
+                    return !isTP;
+                });
+                removed += before - c.pairs.length;
+            });
+            if (removed > 0) {
+                saveState();
+                render();
+                toast(`🏆 大会ペア ${removed}組を解除しました`);
+            } else {
+                toast('解除する大会ペアがありません。');
+            }
+        }
 
         function assign(pid, courtId) {
             const p = findPerson(pid);
@@ -1606,7 +2015,56 @@
         }
 
         // ── RENDER ────────────────────────────────────────────
-        function render() { renderPool(); renderAbsent(); renderCourts(); renderStats(); renderGuests(); }
+        function render() { renderPool(); renderAbsent(); renderCourts(); renderStats(); renderGuests(); renderTournamentPairs(); }
+
+        function renderTournamentPairs() {
+            const list = document.getElementById('tpList');
+            const count = document.getElementById('tpCount');
+            const selA = document.getElementById('tpSelA');
+            const selB = document.getElementById('tpSelB');
+            if (!list || !count || !selA || !selB) return;
+
+            // 一覧
+            list.innerHTML = '';
+            tournamentPairs.forEach(tp => {
+                const pA = findPerson(tp.pidA);
+                const pB = findPerson(tp.pidB);
+                const item = document.createElement('div');
+                item.className = 'tp-item';
+                const absentMark = (pA && pA.absent) || (pB && pB.absent) ? ' 🚫' : '';
+                item.innerHTML = `<div class="tp-item-names">${pA ? pA.name : '?'} ⇆ ${pB ? pB.name : '?'}${absentMark}</div>`;
+                const del = document.createElement('button');
+                del.className = 'tp-del';
+                del.textContent = '×';
+                del.title = 'このペアを削除';
+                del.addEventListener('click', e => {
+                    e.stopPropagation();
+                    removeTournamentPair(tp.id);
+                });
+                item.appendChild(del);
+                list.appendChild(item);
+            });
+            count.textContent = `${tournamentPairs.length}組`;
+
+            // ドロップダウン更新（既登録者は除外して重複登録を防ぐ）
+            const usedPids = new Set();
+            tournamentPairs.forEach(tp => { usedPids.add(tp.pidA); usedPids.add(tp.pidB); });
+
+            const prevA = selA.value;
+            const prevB = selB.value;
+            const buildOptions = (placeholder) => {
+                const opts = [`<option value="">${placeholder}</option>`];
+                people.forEach(p => {
+                    if (usedPids.has(p.id)) return;
+                    opts.push(`<option value="${p.id}">${p.name}（${p.gender === 'male' ? '男' : '女'}）</option>`);
+                });
+                return opts.join('');
+            };
+            selA.innerHTML = buildOptions('選手A');
+            selB.innerHTML = buildOptions('選手B');
+            if (!usedPids.has(prevA)) selA.value = prevA;
+            if (!usedPids.has(prevB)) selB.value = prevB;
+        }
 
         function renderStats() {
             const assigned = courts.reduce((s, c) => s + c.pids.length, 0);
@@ -2245,12 +2703,46 @@
             }
         }
 
+        // ── 大会ペアUI イベントバインド ───────────────────────
+        function bindTournamentPairUI() {
+            const addBtn = document.getElementById('tpAddBtn');
+            const applyBtn = document.getElementById('tpApplyBtn');
+            const releaseBtn = document.getElementById('tpReleaseBtn');
+            const selA = document.getElementById('tpSelA');
+            const selB = document.getElementById('tpSelB');
+            if (!addBtn || !applyBtn || !releaseBtn || !selA || !selB) return;
+
+            addBtn.addEventListener('click', () => {
+                const a = selA.value;
+                const b = selB.value;
+                if (!a || !b) {
+                    toast('選手Aと選手Bを両方選んでください。');
+                    return;
+                }
+                addTournamentPair(a, b);
+            });
+
+            applyBtn.addEventListener('click', applyTournamentPairs);
+            releaseBtn.addEventListener('click', releaseTournamentPairs);
+        }
+
         // ── START ──────────────────────────────────────────────
         initState();
+        loadTournamentPairs();
         if (loadState()) {
             toast('前回保存したコート割を復元しました。');
         }
+        bindTournamentPairUI();
         render();
+
+        // ── PWA Service Worker 登録 ─────────────────────────
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js').catch(err => {
+                    console.warn('SW registration failed:', err);
+                });
+            });
+        }
     </script>
 </body>
 

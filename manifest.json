@@ -1,0 +1,20 @@
+{
+  "name": "KALIDIA コート割",
+  "short_name": "コート割",
+  "description": "バドミントン用コート振り分けツール",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f0f4f8",
+  "theme_color": "#059669",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
