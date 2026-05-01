@@ -395,6 +395,40 @@
             flex: 1;
             font-weight: 500;
             color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .tp-badge {
+            display: inline-block;
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 1px 7px;
+            font-size: 10px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .tp-label-input {
+            flex: 1;
+            min-height: 36px;
+            padding: 4px 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #fff;
+            font-size: 11px;
+            font-family: inherit;
+            color: var(--text);
+            min-width: 0;
+        }
+
+        .tp-label-input:focus {
+            outline: none;
+            border-color: #f59e0b;
         }
 
         .tp-del {
@@ -1436,7 +1470,10 @@
                     <div class="tp-add">
                         <select class="tp-sel" id="tpSelA"><option value="">選手A</option></select>
                         <select class="tp-sel" id="tpSelB"><option value="">選手B</option></select>
-                        <button class="tp-add-btn" id="tpAddBtn">+</button>
+                    </div>
+                    <div class="tp-add">
+                        <input class="tp-label-input" id="tpLabelInput" type="text" placeholder="大会名（任意）" maxlength="20">
+                        <button class="tp-add-btn" id="tpAddBtn">+ 追加</button>
                     </div>
                     <div class="tp-actions">
                         <button class="tp-apply" id="tpApplyBtn">🏆 大会ペアを適用</button>
@@ -1672,7 +1709,8 @@
                     .map(tp => ({
                         id: typeof tp.id === 'string' ? tp.id : ('tp' + Math.random().toString(36).slice(2, 8)),
                         pidA: tp.pidA,
-                        pidB: tp.pidB
+                        pidB: tp.pidB,
+                        label: typeof tp.label === 'string' ? tp.label : ''
                     }));
                 return true;
             } catch (err) {
@@ -1681,7 +1719,7 @@
             }
         }
 
-        function addTournamentPair(pidA, pidB) {
+        function addTournamentPair(pidA, pidB, label = '') {
             if (!pidA || !pidB || pidA === pidB) {
                 toast('同じ選手はペアにできません。');
                 return false;
@@ -1711,12 +1749,21 @@
             }
             tournamentPairs.push({
                 id: 'tp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-                pidA, pidB
+                pidA, pidB,
+                label: (label || '').trim()
             });
             saveTournamentPairs();
             renderTournamentPairs();
-            toast(`🏆 ${pA.name} - ${pB.name} を大会ペアに追加`);
+            const lbl = label && label.trim() ? `[${label.trim()}] ` : '';
+            toast(`🏆 ${lbl}${pA.name} - ${pB.name} を大会ペアに追加`);
             return true;
+        }
+
+        function setTournamentPairLabel(tpId, label) {
+            const tp = tournamentPairs.find(t => t.id === tpId);
+            if (!tp) return;
+            tp.label = (label || '').trim();
+            saveTournamentPairs();
         }
 
         function removeTournamentPair(tpId) {
@@ -2032,7 +2079,43 @@
                 const item = document.createElement('div');
                 item.className = 'tp-item';
                 const absentMark = (pA && pA.absent) || (pB && pB.absent) ? ' 🚫' : '';
-                item.innerHTML = `<div class="tp-item-names">${pA ? pA.name : '?'} ⇆ ${pB ? pB.name : '?'}${absentMark}</div>`;
+                const names = document.createElement('div');
+                names.className = 'tp-item-names';
+                if (tp.label) {
+                    const badge = document.createElement('span');
+                    badge.className = 'tp-badge';
+                    badge.textContent = tp.label;
+                    badge.title = 'タップで大会名を編集';
+                    badge.style.cursor = 'pointer';
+                    badge.addEventListener('click', e => {
+                        e.stopPropagation();
+                        const next = prompt('大会名を編集（空欄でクリア）:', tp.label || '');
+                        if (next !== null) {
+                            setTournamentPairLabel(tp.id, next);
+                            renderTournamentPairs();
+                        }
+                    });
+                    names.appendChild(badge);
+                } else {
+                    const editLink = document.createElement('span');
+                    editLink.className = 'tp-badge';
+                    editLink.textContent = '+ 大会名';
+                    editLink.style.cssText = 'background:transparent;color:#b45309;border-style:dashed;cursor:pointer;';
+                    editLink.title = '大会名を追加';
+                    editLink.addEventListener('click', e => {
+                        e.stopPropagation();
+                        const next = prompt('大会名を入力:', '');
+                        if (next !== null && next.trim()) {
+                            setTournamentPairLabel(tp.id, next);
+                            renderTournamentPairs();
+                        }
+                    });
+                    names.appendChild(editLink);
+                }
+                const text = document.createElement('span');
+                text.textContent = `${pA ? pA.name : '?'} ⇆ ${pB ? pB.name : '?'}${absentMark}`;
+                names.appendChild(text);
+                item.appendChild(names);
                 const del = document.createElement('button');
                 del.className = 'tp-del';
                 del.textContent = '×';
@@ -2399,6 +2482,33 @@
                 });
                 bar.appendChild(btn);
             });
+
+            // 欠席へ移動ボタン（peopleのみ対象、ゲストは除外）
+            const targets = sel
+                .map(id => findPerson(id))
+                .filter(p => p && !guests.includes(p));
+            if (targets.length > 0) {
+                const absBtn = document.createElement('button');
+                absBtn.className = 'ab-btn';
+                absBtn.style.cssText = 'background:#94a3b815;border-color:#94a3b860;color:#475569;';
+                absBtn.textContent = `🚫 欠席へ (${targets.length})`;
+                absBtn.addEventListener('click', () => {
+                    let count = 0;
+                    targets.forEach(p => {
+                        removePidFromAllCourts(p.id);
+                        p.courtId = null;
+                        p.absent = true;
+                        count++;
+                    });
+                    sel = [];
+                    clearPairSel();
+                    saveState();
+                    render();
+                    if (count > 0) toast(`🚫 ${count}名を欠席にしました`);
+                });
+                bar.appendChild(absBtn);
+            }
+
             // キャンセルボタン
             const cancel = document.createElement('button');
             cancel.className = 'ab-cancel';
@@ -2712,6 +2822,7 @@
             const selB = document.getElementById('tpSelB');
             if (!addBtn || !applyBtn || !releaseBtn || !selA || !selB) return;
 
+            const labelInput = document.getElementById('tpLabelInput');
             addBtn.addEventListener('click', () => {
                 const a = selA.value;
                 const b = selB.value;
@@ -2719,7 +2830,10 @@
                     toast('選手Aと選手Bを両方選んでください。');
                     return;
                 }
-                addTournamentPair(a, b);
+                const label = labelInput ? labelInput.value : '';
+                if (addTournamentPair(a, b, label) && labelInput) {
+                    labelInput.value = '';
+                }
             });
 
             applyBtn.addEventListener('click', applyTournamentPairs);
