@@ -345,7 +345,28 @@
         }
 
         .tp-summary-label {
+            flex-shrink: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tp-edit-name {
+            min-width: 32px;
+            min-height: 32px;
+            border: none;
+            background: transparent;
+            color: #b45309;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 6px;
+            padding: 4px;
             flex-shrink: 0;
+        }
+
+        .tp-edit-name:hover {
+            background: #fed7aa;
         }
 
         .tp-count {
@@ -1462,7 +1483,8 @@
             <!-- Tournament pair section -->
             <details class="tp-section" id="tpSection">
                 <summary class="tp-summary">
-                    <span class="tp-summary-label">🏆 大会ペア</span>
+                    <span class="tp-summary-label" id="tpTitle">🏆 大会ペア</span>
+                    <button class="tp-edit-name" id="tpEditNameBtn" title="大会名を編集">✏️</button>
                     <span class="tp-count" id="tpCount">0組</span>
                 </summary>
                 <div class="tp-body">
@@ -1470,10 +1492,7 @@
                     <div class="tp-add">
                         <select class="tp-sel" id="tpSelA"><option value="">選手A</option></select>
                         <select class="tp-sel" id="tpSelB"><option value="">選手B</option></select>
-                    </div>
-                    <div class="tp-add">
-                        <input class="tp-label-input" id="tpLabelInput" type="text" placeholder="大会名（任意）" maxlength="20">
-                        <button class="tp-add-btn" id="tpAddBtn">+ 追加</button>
+                        <button class="tp-add-btn" id="tpAddBtn">+</button>
                     </div>
                     <div class="tp-actions">
                         <button class="tp-apply" id="tpApplyBtn">🏆 大会ペアを適用</button>
@@ -1554,6 +1573,7 @@
         let pairSel = null; // selected person id for pairing (within court)
         let currentPreset = 0;
         let tournamentPairs = []; // [{id, pidA, pidB}] シーズン中ずっと永続
+        let tournamentName = ''; // 大会名（任意）
         const STORAGE_KEY = 'badminton_court_state_v1';
         const TOURNAMENT_KEY = 'badminton_tournament_pairs_v1';
 
@@ -1690,7 +1710,7 @@
         // ── 大会ペア（シーズン永続） ──────────────────────────
         function saveTournamentPairs() {
             try {
-                localStorage.setItem(TOURNAMENT_KEY, JSON.stringify({ version: 1, tournamentPairs }));
+                localStorage.setItem(TOURNAMENT_KEY, JSON.stringify({ version: 1, tournamentName, tournamentPairs }));
                 return true;
             } catch (err) {
                 console.error('TournamentPairs save failed:', err);
@@ -1704,13 +1724,13 @@
                 if (!raw) return false;
                 const saved = JSON.parse(raw);
                 if (!saved || !Array.isArray(saved.tournamentPairs)) return false;
+                tournamentName = typeof saved.tournamentName === 'string' ? saved.tournamentName : '';
                 tournamentPairs = saved.tournamentPairs
                     .filter(tp => tp && typeof tp.pidA === 'string' && typeof tp.pidB === 'string' && tp.pidA !== tp.pidB)
                     .map(tp => ({
                         id: typeof tp.id === 'string' ? tp.id : ('tp' + Math.random().toString(36).slice(2, 8)),
                         pidA: tp.pidA,
-                        pidB: tp.pidB,
-                        label: typeof tp.label === 'string' ? tp.label : ''
+                        pidB: tp.pidB
                     }));
                 return true;
             } catch (err) {
@@ -1719,7 +1739,13 @@
             }
         }
 
-        function addTournamentPair(pidA, pidB, label = '') {
+        function setTournamentName(name) {
+            tournamentName = (name || '').trim().slice(0, 30);
+            saveTournamentPairs();
+            renderTournamentPairs();
+        }
+
+        function addTournamentPair(pidA, pidB) {
             if (!pidA || !pidB || pidA === pidB) {
                 toast('同じ選手はペアにできません。');
                 return false;
@@ -1749,21 +1775,12 @@
             }
             tournamentPairs.push({
                 id: 'tp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-                pidA, pidB,
-                label: (label || '').trim()
+                pidA, pidB
             });
             saveTournamentPairs();
             renderTournamentPairs();
-            const lbl = label && label.trim() ? `[${label.trim()}] ` : '';
-            toast(`🏆 ${lbl}${pA.name} - ${pB.name} を大会ペアに追加`);
+            toast(`🏆 ${pA.name} - ${pB.name} を大会ペアに追加`);
             return true;
-        }
-
-        function setTournamentPairLabel(tpId, label) {
-            const tp = tournamentPairs.find(t => t.id === tpId);
-            if (!tp) return;
-            tp.label = (label || '').trim();
-            saveTournamentPairs();
         }
 
         function removeTournamentPair(tpId) {
@@ -2069,7 +2086,13 @@
             const count = document.getElementById('tpCount');
             const selA = document.getElementById('tpSelA');
             const selB = document.getElementById('tpSelB');
+            const title = document.getElementById('tpTitle');
             if (!list || !count || !selA || !selB) return;
+
+            // セクションタイトル
+            if (title) {
+                title.textContent = tournamentName ? `🏆 ${tournamentName}ペア` : '🏆 大会ペア';
+            }
 
             // 一覧
             list.innerHTML = '';
@@ -2081,40 +2104,7 @@
                 const absentMark = (pA && pA.absent) || (pB && pB.absent) ? ' 🚫' : '';
                 const names = document.createElement('div');
                 names.className = 'tp-item-names';
-                if (tp.label) {
-                    const badge = document.createElement('span');
-                    badge.className = 'tp-badge';
-                    badge.textContent = tp.label;
-                    badge.title = 'タップで大会名を編集';
-                    badge.style.cursor = 'pointer';
-                    badge.addEventListener('click', e => {
-                        e.stopPropagation();
-                        const next = prompt('大会名を編集（空欄でクリア）:', tp.label || '');
-                        if (next !== null) {
-                            setTournamentPairLabel(tp.id, next);
-                            renderTournamentPairs();
-                        }
-                    });
-                    names.appendChild(badge);
-                } else {
-                    const editLink = document.createElement('span');
-                    editLink.className = 'tp-badge';
-                    editLink.textContent = '+ 大会名';
-                    editLink.style.cssText = 'background:transparent;color:#b45309;border-style:dashed;cursor:pointer;';
-                    editLink.title = '大会名を追加';
-                    editLink.addEventListener('click', e => {
-                        e.stopPropagation();
-                        const next = prompt('大会名を入力:', '');
-                        if (next !== null && next.trim()) {
-                            setTournamentPairLabel(tp.id, next);
-                            renderTournamentPairs();
-                        }
-                    });
-                    names.appendChild(editLink);
-                }
-                const text = document.createElement('span');
-                text.textContent = `${pA ? pA.name : '?'} ⇆ ${pB ? pB.name : '?'}${absentMark}`;
-                names.appendChild(text);
+                names.textContent = `${pA ? pA.name : '?'} ⇆ ${pB ? pB.name : '?'}${absentMark}`;
                 item.appendChild(names);
                 const del = document.createElement('button');
                 del.className = 'tp-del';
@@ -2822,7 +2812,6 @@
             const selB = document.getElementById('tpSelB');
             if (!addBtn || !applyBtn || !releaseBtn || !selA || !selB) return;
 
-            const labelInput = document.getElementById('tpLabelInput');
             addBtn.addEventListener('click', () => {
                 const a = selA.value;
                 const b = selB.value;
@@ -2830,14 +2819,22 @@
                     toast('選手Aと選手Bを両方選んでください。');
                     return;
                 }
-                const label = labelInput ? labelInput.value : '';
-                if (addTournamentPair(a, b, label) && labelInput) {
-                    labelInput.value = '';
-                }
+                addTournamentPair(a, b);
             });
 
             applyBtn.addEventListener('click', applyTournamentPairs);
             releaseBtn.addEventListener('click', releaseTournamentPairs);
+
+            // 大会名編集ボタン（summaryクリックでdetails開閉が走らないようstopPropagation）
+            const editNameBtn = document.getElementById('tpEditNameBtn');
+            if (editNameBtn) {
+                editNameBtn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const next = prompt('大会名を入力（空欄でクリア）:', tournamentName || '');
+                    if (next !== null) setTournamentName(next);
+                });
+            }
         }
 
         // ── START ──────────────────────────────────────────────
