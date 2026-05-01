@@ -324,26 +324,53 @@
         .tp-summary {
             list-style: none;
             cursor: pointer;
-            padding: 8px 12px;
-            font-size: 12px;
+            padding: 10px 14px;
+            font-size: 13px;
             font-weight: 700;
             color: #b45309;
             display: flex;
             align-items: center;
             gap: 8px;
-            min-height: 44px;
+            min-height: 48px;
+            background: linear-gradient(135deg, #fef3c7, #fff7ed);
+            border-bottom: 1px solid transparent;
+            transition: background .15s;
+            user-select: none;
+        }
+
+        .tp-section[open] .tp-summary {
+            border-bottom-color: #fed7aa;
+        }
+
+        .tp-summary:hover,
+        .tp-summary:active {
+            background: linear-gradient(135deg, #fde68a, #fef3c7);
         }
 
         .tp-summary::-webkit-details-marker { display: none; }
 
-        .tp-summary::after {
-            content: '▼';
-            margin-left: auto;
-            font-size: 9px;
-            transition: transform .2s;
+        .tp-summary-handle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 4px;
+            background: #d97706;
+            border-radius: 2px;
+            opacity: .5;
+            flex-shrink: 0;
         }
 
-        .tp-section[open] .tp-summary::after {
+        .tp-summary-arrow {
+            margin-left: auto;
+            font-size: 11px;
+            color: #b45309;
+            transition: transform .2s;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .tp-section[open] .tp-summary-arrow {
             transform: rotate(180deg);
         }
 
@@ -1511,9 +1538,11 @@
             <!-- Tournament pair section（コート割の下に配置） -->
             <details class="tp-section" id="tpSection">
                 <summary class="tp-summary">
+                    <span class="tp-summary-handle"></span>
                     <span class="tp-summary-label" id="tpTitle">🏆 大会ペア</span>
                     <button class="tp-edit-name" id="tpEditNameBtn" title="大会名を編集">✏️</button>
                     <span class="tp-count" id="tpCount">0組</span>
+                    <span class="tp-summary-arrow">▼</span>
                 </summary>
                 <div class="tp-body">
                     <div class="tp-list" id="tpList"></div>
