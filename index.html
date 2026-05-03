@@ -2580,19 +2580,29 @@
                     return;
                 }
             }
-            sel = [];
-
             // Pair mode: if same court, pair them
             const court = courts.find(c => c.id === courtId);
             if (!court) return;
             if (!court.pids.includes(pid)) return;
 
-            // Already in a pair? skip
-            if (court.pairs.some(pair => pair.includes(pid))) {
+            // ペア中メンバーをタップ → ペアごと選択トグル（別コートへ移動できるように）
+            const myPair = court.pairs.find(pair => pair.includes(pid));
+            if (myPair) {
+                const [pidA, pidB] = myPair;
+                const bothSelected = sel.includes(pidA) && sel.includes(pidB);
+                if (bothSelected) {
+                    sel = sel.filter(s => s !== pidA && s !== pidB);
+                } else {
+                    if (!sel.includes(pidA)) sel.push(pidA);
+                    if (!sel.includes(pidB)) sel.push(pidB);
+                }
                 clearPairSel();
                 refreshSelection();
+                updateAssignBar();
                 return;
             }
+
+            sel = [];
 
             if (pairSel && pairSel !== pid) {
                 // Check pairSel is in same court
@@ -2631,7 +2641,14 @@
                 if (e.target.closest('.delbtn') || e.target.closest('.cname') ||
                     e.target.closest('.g-toggle') || e.target.closest('.g-inp') ||
                     e.target.closest('.unpair-btn') || e.target.closest('.abs-btn')) return;
-                drag = { pid, fromCourt: fromCourt || null, active: false, startX: e.clientX, startY: e.clientY };
+                // ペア中メンバーのドラッグはペアごと移動として扱う
+                let pairPids = null;
+                if (fromCourt) {
+                    const court = courts.find(c => c.id === fromCourt);
+                    const myPair = court && court.pairs.find(pair => pair.includes(pid));
+                    if (myPair) pairPids = [...myPair];
+                }
+                drag = { pid, pairPids, fromCourt: fromCourt || null, active: false, startX: e.clientX, startY: e.clientY };
             }, { passive: true });
         }
 
