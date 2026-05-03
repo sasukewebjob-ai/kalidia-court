@@ -2697,6 +2697,7 @@
 
                 // ペアごと移動
                 if (drag.pairPids) {
+                    document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
                     if (cc) {
                         const toId = cc.dataset.cid;
                         if (toId && toId !== drag.fromCourt) {
@@ -2712,11 +2713,13 @@
                                 );
                                 if (!dup) targetCourt.pairs.push([pidA, pidB]);
                             }
+                            sel = [];
+                            clearPairSel();
+                            saveState();
                             render();
                             toast(`ペアをコート移動しました`);
                         }
                     }
-                    document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
                     drag.pid = null;
                     drag.pairPids = null;
                     drag.active = false;
