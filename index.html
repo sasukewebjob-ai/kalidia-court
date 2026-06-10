@@ -841,6 +841,18 @@
             color: var(--red);
         }
 
+        .mf-badge {
+            display: flex;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .mf-badge .mf-m { color: var(--male); }
+        .mf-badge .mf-f { color: var(--female); }
+        .mf-badge .mf-g { color: var(--guest); }
+
         .card-body {
             flex: 1;
             padding: 10px;
@@ -1255,6 +1267,11 @@
                 padding: 1px 5px;
             }
 
+            .mf-badge {
+                font-size: 9px;
+                gap: 3px;
+            }
+
             .card-body {
                 padding: 5px;
                 gap: 3px;
@@ -1309,7 +1326,12 @@
             }
 
             .hstats {
-                display: none;
+                gap: 4px;
+            }
+
+            .badge {
+                padding: 2px 7px;
+                font-size: 10px;
             }
 
             /* Toast & hints */
@@ -2325,10 +2347,23 @@
                 maxLabel.style.cssText = 'font-size:10px;color:var(--muted);margin-right:4px;';
                 maxLabel.textContent = c.wide ? '(2面)' : '(1面)';
 
+                const gm = c.pids.filter(pid => people.some(p => p.id === pid && p.gender === 'male')).length;
+                const gf = c.pids.filter(pid => people.some(p => p.id === pid && p.gender === 'female')).length;
+                const gg = c.pids.length - gm - gf;
+                const mfEl = document.createElement('span');
+                mfEl.className = 'mf-badge';
+                [['mf-m', '男' + gm], ['mf-f', '女' + gf], ['mf-g', gg > 0 ? 'G' + gg : '']].forEach(([cls, txt]) => {
+                    if (!txt) return;
+                    const b = document.createElement('b');
+                    b.className = cls;
+                    b.textContent = txt;
+                    mfEl.appendChild(b);
+                });
+
                 const cntEl = document.createElement('div');
                 cntEl.className = 'cnt ' + (full ? 'full' : 'ok');
                 cntEl.textContent = `${c.pids.length}/${c.max}`;
-                head.appendChild(nameEl); head.appendChild(maxLabel); head.appendChild(cntEl);
+                head.appendChild(nameEl); head.appendChild(maxLabel); head.appendChild(mfEl); head.appendChild(cntEl);
 
                 // Body
                 const body = document.createElement('div');
