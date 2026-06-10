@@ -1,4 +1,4 @@
-const CACHE = 'kalidia-court-v7';
+const CACHE = 'kalidia-court-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -9,7 +9,6 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE).then(c =>
       Promise.all(ASSETS.map(url =>
@@ -17,6 +16,11 @@ self.addEventListener('install', e => {
       ))
     )
   );
+});
+
+// ページ側の「更新」ボタンから呼ばれる
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
@@ -29,6 +33,24 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+
+  // HTML本体はネットワーク優先：デプロイが確実に届く。オフライン時のみキャッシュ
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {});
+        return res;
+      }).catch(() =>
+        caches.match(e.request)
+          .then(cached => cached || caches.match('./index.html'))
+          .then(cached => cached || caches.match('./'))
+      )
+    );
+    return;
+  }
+
+  // アセットはキャッシュ優先＋裏で更新
   e.respondWith(
     caches.match(e.request).then(cached => {
       const fetchPromise = fetch(e.request).then(res => {

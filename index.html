@@ -3140,11 +3140,51 @@
         bindBackupUI();
         render();
 
-        // ── PWA Service Worker 登録 ─────────────────────────
+        // ── PWA Service Worker 登録（更新通知つき） ──────────
+        function showUpdateToast(reg) {
+            if (document.getElementById('swUpdateToast')) return;
+            const t = document.createElement('div');
+            t.id = 'swUpdateToast';
+            t.className = 'toast';
+            const msg = document.createElement('span');
+            msg.textContent = '新しいバージョンがあります';
+            const btn = document.createElement('button');
+            btn.textContent = '更新';
+            btn.style.cssText = 'margin-left:8px;padding:4px 12px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;';
+            btn.addEventListener('click', () => {
+                if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                t.remove();
+            });
+            t.appendChild(msg);
+            t.appendChild(btn);
+            document.body.appendChild(t);
+        }
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js').catch(err => {
+                navigator.serviceWorker.register('service-worker.js').then(reg => {
+                    reg.addEventListener('updatefound', () => {
+                        const nw = reg.installing;
+                        if (!nw) return;
+                        nw.addEventListener('statechange', () => {
+                            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                                showUpdateToast(reg);
+                            }
+                        });
+                    });
+                    // 前回「更新」を押さないまま閉じた場合もwaitingが残っているので通知
+                    if (reg.waiting && navigator.serviceWorker.controller) showUpdateToast(reg);
+                }).catch(err => {
                     console.warn('SW registration failed:', err);
+                });
+
+                let hadController = !!navigator.serviceWorker.controller;
+                let reloaded = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (!hadController) { hadController = true; return; }
+                    if (reloaded) return;
+                    reloaded = true;
+                    location.reload();
                 });
             });
         }
