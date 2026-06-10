@@ -641,23 +641,6 @@
             background: #6366f120;
         }
 
-        .savebtn {
-            background: #05966912;
-            border: 1px solid #05966940;
-            border-radius: 6px;
-            padding: 5px 11px;
-            color: var(--accent);
-            font-size: 11px;
-            cursor: pointer;
-            transition: all .2s;
-            font-family: inherit;
-            font-weight: 700;
-        }
-
-        .savebtn:hover {
-            background: #05966920;
-        }
-
         .rbtn {
             margin-left: auto;
             background: #dc262610;
@@ -1236,7 +1219,7 @@
                 font-size: 9px;
             }
 
-            .pbtn, .sbtn, .savebtn, .rbtn {
+            .pbtn, .sbtn, .rbtn {
                 padding: 6px 10px;
                 font-size: 10px;
                 border-radius: 5px;
@@ -1529,7 +1512,7 @@
                 <button class="pbtn" data-preset="1" onclick="applyPreset(1)">2コート（12人）</button>
                 <button class="pbtn" data-preset="2" onclick="applyPreset(2)">3コート（12人+6人×2）</button>
                 <button class="sbtn" onclick="swapCourts()">🔃 上下入替</button>
-                <button class="savebtn" onclick="saveState(true)">💾 保存</button>
+                <button class="sbtn" onclick="undoLast()">↩ 戻す</button>
                 <button class="sbtn" onclick="screenshotCourts()" style="background:#6366f1;color:#fff;">📸 撮影</button>
                 <button class="rbtn" onclick="resetAll()">🔄 リセット</button>
             </div>
@@ -1830,6 +1813,7 @@
                 toast('大会ペアが登録されていません。');
                 return;
             }
+            pushHistory();
             let applied = 0, skippedAbsent = 0, skippedNoSpace = 0;
 
             for (const tp of tournamentPairs) {
@@ -1884,7 +1868,6 @@
                 applied++;
             }
 
-            saveState();
             render();
 
             let msg = `🏆 大会ペア ${applied}組を適用`;
@@ -1896,6 +1879,7 @@
         }
 
         function releaseTournamentPairs() {
+            const snap = snapshot();
             let removed = 0;
             courts.forEach(c => {
                 const before = c.pairs.length;
@@ -1909,7 +1893,7 @@
                 removed += before - c.pairs.length;
             });
             if (removed > 0) {
-                saveState();
+                pushHistory(snap);
                 render();
                 toast(`🏆 大会ペア ${removed}組を解除しました`);
             } else {
@@ -1948,6 +1932,7 @@
         }
 
         function removeFromCourt(pid) {
+            pushHistory();
             removePidFromAllCourts(pid);
             const p = findPerson(pid);
             if (p) p.courtId = null;
@@ -1957,6 +1942,7 @@
         }
 
         function applyPreset(i) {
+            pushHistory();
             currentPreset = i;
             const oldCourts = courts;
             const newCourts = PRESETS[i].map((p, j) => ({
@@ -1999,6 +1985,8 @@
         }
 
         function resetAll() {
+            if (!confirm('全員をプールに戻します。よろしいですか？')) return;
+            pushHistory();
             [...people, ...guests].forEach(p => p.courtId = null);
             courts.forEach(c => { c.pids = []; c.pairs = []; });
             sel = [];
@@ -2028,6 +2016,7 @@
                 toast('入れ替えるコートがありません。');
                 return;
             }
+            pushHistory();
 
             // 上半分と下半分を判定
             const mid = Math.ceil(rows.length / 2);
@@ -2065,6 +2054,7 @@
         function markAbsent(pid) {
             const p = findPerson(pid);
             if (!p || guests.includes(p)) return;
+            pushHistory();
             removePidFromAllCourts(pid);
             p.courtId = null;
             p.absent = true;
@@ -2076,6 +2066,7 @@
         function markPresent(pid) {
             const p = findPerson(pid);
             if (!p) return;
+            pushHistory();
             p.absent = false;
             render();
         }
@@ -2090,6 +2081,7 @@
                 toast('すでにペアになっています。解除してからペアを組んでください。');
                 return;
             }
+            pushHistory();
             court.pairs.push([pidA, pidB]);
             clearPairSel();
             render();
@@ -2098,6 +2090,7 @@
         function unpair(courtId, pairIndex) {
             const court = courts.find(c => c.id === courtId);
             if (!court) return;
+            pushHistory();
             court.pairs.splice(pairIndex, 1);
             render();
         }
@@ -2111,8 +2104,38 @@
             return pairIdx % PAIR_BG_COLORS.length;
         }
 
+        // ── UNDO ──────────────────────────────────────────────
+        let undoStack = [];
+
+        function snapshot() {
+            return JSON.stringify({ currentPreset, people, guests, courts });
+        }
+
+        function pushHistory(snap) {
+            undoStack.push(snap || snapshot());
+            if (undoStack.length > 30) undoStack.shift();
+        }
+
+        function undoLast() {
+            if (undoStack.length === 0) {
+                toast('戻す操作がありません。');
+                return;
+            }
+            const s = JSON.parse(undoStack.pop());
+            currentPreset = s.currentPreset;
+            people = s.people;
+            guests = s.guests;
+            courts = s.courts;
+            sel = [];
+            clearPairSel();
+            updatePresetButtons();
+            updateAssignBar();
+            render();
+            toast('↩ 直前の操作を元に戻しました');
+        }
+
         // ── RENDER ────────────────────────────────────────────
-        function render() { renderPool(); renderAbsent(); renderCourts(); renderStats(); renderGuests(); renderTournamentPairs(); }
+        function render() { renderPool(); renderAbsent(); renderCourts(); renderStats(); renderGuests(); renderTournamentPairs(); saveState(); }
 
         function renderTournamentPairs() {
             const list = document.getElementById('tpList');
@@ -2264,7 +2287,7 @@
                 inp.type = 'text'; inp.className = 'g-inp';
                 inp.placeholder = `ゲスト${i + 1}の名前`;
                 inp.value = g.name; inp.disabled = !g.enabled;
-                inp.addEventListener('input', e => { guests[i].name = e.target.value; renderPool(); renderStats(); });
+                inp.addEventListener('input', e => { guests[i].name = e.target.value; renderPool(); renderStats(); saveState(); });
                 inp.addEventListener('change', () => { if (g.courtId) render(); });
                 row.appendChild(tog); row.appendChild(inp);
                 el.appendChild(row);
@@ -2273,6 +2296,7 @@
 
         function toggleGuest(i) {
             const g = guests[i];
+            pushHistory();
             g.enabled = !g.enabled;
             if (!g.enabled) {
                 removePidFromAllCourts(g.id);
@@ -2295,7 +2319,7 @@
                 head.className = 'card-head';
                 const nameEl = document.createElement('input');
                 nameEl.type = 'text'; nameEl.className = 'cname'; nameEl.value = c.name;
-                nameEl.addEventListener('change', e => { courts[i].name = e.target.value; });
+                nameEl.addEventListener('change', e => { courts[i].name = e.target.value; saveState(); });
 
                 const maxLabel = document.createElement('span');
                 maxLabel.style.cssText = 'font-size:10px;color:var(--muted);margin-right:4px;';
@@ -2467,6 +2491,7 @@
                     btn.style.opacity = '0.7';
                 }
                 btn.addEventListener('click', () => {
+                    const snap = snapshot();
                     // 移動前：sel内のpid同士のペア関係を抽出
                     const pairsToTransfer = [];
                     courts.forEach(court => {
@@ -2485,6 +2510,7 @@
 
                     // 移動先でペア再登録
                     if (count > 0) {
+                        pushHistory(snap);
                         const targetCourt = courts.find(co => co.id === c.id);
                         if (targetCourt) {
                             pairsToTransfer.forEach(pair => {
@@ -2516,6 +2542,7 @@
                 absBtn.style.cssText = 'background:#94a3b815;border-color:#94a3b860;color:#475569;';
                 absBtn.textContent = `🚫 欠席へ (${targets.length})`;
                 absBtn.addEventListener('click', () => {
+                    pushHistory();
                     let count = 0;
                     targets.forEach(p => {
                         removePidFromAllCourts(p.id);
@@ -2525,7 +2552,6 @@
                     });
                     sel = [];
                     clearPairSel();
-                    saveState();
                     render();
                     if (count > 0) toast(`🚫 ${count}名を欠席にしました`);
                 });
@@ -2548,6 +2574,7 @@
         function onCourtClick(courtId, e) {
             if (e.target.closest('.cmem') || e.target.closest('.pair-group')) return;
             if (sel.length > 0) {
+                const snap = snapshot();
                 let count = 0;
                 const toAssign = [...sel];
                 toAssign.forEach(pid => {
@@ -2556,7 +2583,9 @@
                     }
                 });
                 if (count > 0) {
+                    pushHistory(snap);
                     sel = [];
+                    updateAssignBar();
                     render();
                     toast(`${count}名を割り当てました！`);
                 }
@@ -2566,6 +2595,7 @@
         function onCourtMemClick(pid, courtId) {
             // If we have pool selections, assign to this court
             if (sel.length > 0) {
+                const snap = snapshot();
                 let count = 0;
                 const toAssign = [...sel];
                 toAssign.forEach(spid => {
@@ -2574,7 +2604,9 @@
                     }
                 });
                 if (count > 0) {
+                    pushHistory(snap);
                     sel = [];
+                    updateAssignBar();
                     render();
                     toast(`${count}名を割り当てました！`);
                     return;
@@ -2701,6 +2733,7 @@
                     if (cc) {
                         const toId = cc.dataset.cid;
                         if (toId && toId !== drag.fromCourt) {
+                            pushHistory();
                             const [pidA, pidB] = drag.pairPids;
                             assign(pidA, toId);
                             assign(pidB, toId);
@@ -2715,7 +2748,6 @@
                             }
                             sel = [];
                             clearPairSel();
-                            saveState();
                             render();
                             toast(`ペアをコート移動しました`);
                         }
@@ -2746,6 +2778,7 @@
                 if (cc) {
                     const toId = cc.dataset.cid;
                     if (toId && toId !== drag.fromCourt) {
+                        pushHistory();
                         if (drag.fromCourt) {
                             removePidFromAllCourts(drag.pid);
                             const p = findPerson(drag.pid);
