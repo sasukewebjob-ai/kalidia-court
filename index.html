@@ -1697,10 +1697,11 @@
         const TOURNAMENT_KEY = 'badminton_tournament_pairs_v1';
 
         function initState() {
-            let n = 1;
+            // IDは名前ベース（M_大野 / F_濱島）。members.txtの順序変更に影響されない
+            // 注意: 同性で同名のメンバーは区別できないため、members.txt側で表記を変えること
             people = [
-                ...RAW.male.map(name => ({ id: 'm' + (n++), name, gender: 'male', courtId: null, absent: false })),
-                ...RAW.female.map(name => ({ id: 'm' + (n++), name, gender: 'female', courtId: null, absent: false }))
+                ...RAW.male.map(name => ({ id: 'M_' + name, name, gender: 'male', courtId: null, absent: false })),
+                ...RAW.female.map(name => ({ id: 'F_' + name, name, gender: 'female', courtId: null, absent: false }))
             ];
             courts = PRESETS[0].map((p, i) => ({ id: 'c' + i, name: p.name, max: p.max, wide: p.wide, pids: [], pairs: [] }));
             guests = [1, 2].map(i => ({ id: 'g' + i, name: '', enabled: false, courtId: null }));
@@ -1741,15 +1742,18 @@
                     return false;
                 }
 
-                people = saved.people
-                    .map(p => ({
-                        id: typeof p.id === 'string' ? p.id : '',
-                        name: typeof p.name === 'string' ? p.name : '',
-                        gender: p.gender === 'female' ? 'female' : (p.gender === 'male' ? 'male' : ''),
-                        courtId: typeof p.courtId === 'string' ? p.courtId : null,
-                        absent: !!p.absent
-                    }))
-                    .filter(p => p.id && (p.gender === 'male' || p.gender === 'female'));
+                // RAW（members.txt）を正としてマージ：保存後に追加されたメンバーは新規として残し、
+                // 削除されたメンバーの保存データは捨てる。引き継ぐのは欠席フラグのみ
+                // （コート配置はcourtsのpidsから再構築される）
+                const savedById = new Map(
+                    saved.people
+                        .filter(p => p && typeof p.id === 'string')
+                        .map(p => [p.id, p])
+                );
+                people.forEach(p => {
+                    const sp = savedById.get(p.id);
+                    if (sp) p.absent = !!sp.absent;
+                });
 
                 guests = saved.guests
                     .map(g => ({
@@ -1785,7 +1789,7 @@
                         : []
                 }));
 
-                if (people.length === 0 || courts.length === 0) return false;
+                if (courts.length === 0) return false;
 
                 const validIds = new Set([...people, ...guests].map(p => p.id));
                 const used = new Set();
@@ -1825,6 +1829,59 @@
         }
 
         function findPerson(id) { return people.find(p => p.id === id) || guests.find(g => g.id === id); }
+
+        // ── 旧連番ID（m1〜）→ 名前ベースIDへの一括移行 ─────────
+        function migrateStorageIds() {
+            const oldIdRe = /^m\d+$/;
+            try {
+                const map = {};
+                let savedState = null;
+                const rawState = localStorage.getItem(STORAGE_KEY);
+                if (rawState) {
+                    savedState = JSON.parse(rawState);
+                    if (savedState && Array.isArray(savedState.people)) {
+                        savedState.people.forEach(p => {
+                            if (p && oldIdRe.test(p.id) && typeof p.name === 'string' && p.name) {
+                                map[p.id] = (p.gender === 'female' ? 'F_' : 'M_') + p.name;
+                            }
+                        });
+                    }
+                }
+                // 保存データから引けない旧IDはRAW順から再現（旧実装は男性→女性の通し連番）
+                let n = 1;
+                [...RAW.male.map(nm => ['M_', nm]), ...RAW.female.map(nm => ['F_', nm])].forEach(([prefix, nm]) => {
+                    const old = 'm' + (n++);
+                    if (!map[old]) map[old] = prefix + nm;
+                });
+                const remap = pid => map[pid] || pid;
+
+                if (savedState && Array.isArray(savedState.people) && savedState.people.some(p => p && oldIdRe.test(p.id))) {
+                    savedState.people.forEach(p => { if (p && map[p.id]) p.id = map[p.id]; });
+                    (savedState.courts || []).forEach(c => {
+                        if (!c) return;
+                        if (Array.isArray(c.pids)) c.pids = c.pids.map(remap);
+                        if (Array.isArray(c.pairs)) c.pairs = c.pairs.map(pair => Array.isArray(pair) ? pair.map(remap) : pair);
+                    });
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(savedState));
+                }
+
+                const rawTp = localStorage.getItem(TOURNAMENT_KEY);
+                if (rawTp) {
+                    const t = JSON.parse(rawTp);
+                    if (t && Array.isArray(t.tournamentPairs) &&
+                        t.tournamentPairs.some(tp => tp && (oldIdRe.test(tp.pidA) || oldIdRe.test(tp.pidB)))) {
+                        t.tournamentPairs.forEach(tp => {
+                            if (!tp) return;
+                            tp.pidA = remap(tp.pidA);
+                            tp.pidB = remap(tp.pidB);
+                        });
+                        localStorage.setItem(TOURNAMENT_KEY, JSON.stringify(t));
+                    }
+                }
+            } catch (err) {
+                console.error('ID migration failed:', err);
+            }
+        }
 
         // ── 大会ペア（シーズン永続） ──────────────────────────
         function saveTournamentPairs() {
@@ -3052,6 +3109,7 @@
                     if (data.tournament) localStorage.setItem(TOURNAMENT_KEY, JSON.stringify(data.tournament));
                     undoStack = [];
                     initState();
+                    migrateStorageIds();
                     loadTournamentPairs();
                     loadState();
                     render();
@@ -3132,6 +3190,7 @@
 
         // ── START ──────────────────────────────────────────────
         initState();
+        migrateStorageIds();
         loadTournamentPairs();
         if (loadState()) {
             toast('前回保存したコート割を復元しました。');
