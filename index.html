@@ -583,6 +583,71 @@
             background: #fef3c7;
         }
 
+        /* ── Data management section ── */
+        .dm-section {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--surface);
+            margin-top: 4px;
+            overflow: hidden;
+        }
+
+        .dm-summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 48px;
+            background: linear-gradient(135deg, #e8eef4, #f5f7fa);
+            user-select: none;
+        }
+
+        .dm-summary::-webkit-details-marker { display: none; }
+
+        .dm-arrow {
+            margin-left: auto;
+            font-size: 11px;
+            transition: transform .2s;
+        }
+
+        .dm-section[open] .dm-arrow { transform: rotate(180deg); }
+
+        .dm-body {
+            padding: 10px 12px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-top: 1px solid var(--border);
+        }
+
+        .dm-actions { display: flex; gap: 6px; }
+
+        .dm-btn {
+            flex: 1;
+            min-height: 44px;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: inherit;
+        }
+
+        .dm-btn:active { background: var(--border); }
+
+        .dm-note {
+            font-size: 10px;
+            color: var(--muted);
+        }
+
         /* ── Courts area ── */
         .courts-area {
             flex: 1;
@@ -1560,6 +1625,22 @@
                         <button class="tp-apply" id="tpApplyBtn">🏆 大会ペアを適用</button>
                         <button class="tp-release" id="tpReleaseBtn" title="出場中の大会ペアをすべて解除">解除</button>
                     </div>
+                </div>
+            </details>
+
+            <!-- Data management section -->
+            <details class="dm-section" id="dmSection">
+                <summary class="dm-summary">
+                    <span>💾 データ管理（バックアップ）</span>
+                    <span class="dm-arrow">▼</span>
+                </summary>
+                <div class="dm-body">
+                    <div class="dm-actions">
+                        <button class="dm-btn" id="dmExportBtn">⬇ バックアップを保存</button>
+                        <button class="dm-btn" id="dmImportBtn">⬆ 復元（読み込み）</button>
+                    </div>
+                    <div class="dm-note" id="dmLastBackup">最終バックアップ: 未実施</div>
+                    <input type="file" id="dmImportFile" accept=".json,application/json" style="display:none;">
                 </div>
             </details>
         </main>
@@ -2906,6 +2987,97 @@
             toast('📸 保存しました！');
         }
 
+        // ── BACKUP (export / import) ─────────────────────────
+        const BACKUP_AT_KEY = 'badminton_court_backup_at_v1';
+
+        function renderBackupInfo() {
+            const el = document.getElementById('dmLastBackup');
+            if (!el) return;
+            const at = localStorage.getItem(BACKUP_AT_KEY);
+            el.textContent = '最終バックアップ: ' + (at ? at.slice(0, 10) : '未実施');
+        }
+
+        function exportBackup() {
+            saveState();
+            saveTournamentPairs();
+            let state = null, tournament = null;
+            try { state = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { }
+            try { tournament = JSON.parse(localStorage.getItem(TOURNAMENT_KEY)); } catch { }
+            const data = {
+                app: 'kalidia-court',
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                state,
+                tournament
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const fname = 'court_backup_' + new Date().toISOString().slice(0, 10) + '.json';
+            const finish = () => {
+                localStorage.setItem(BACKUP_AT_KEY, new Date().toISOString());
+                renderBackupInfo();
+            };
+            const file = new File([blob], fname, { type: 'application/json' });
+            if (navigator.canShare && navigator.canShare({ files: [file] }) && /Mobi|Android/i.test(navigator.userAgent)) {
+                navigator.share({ files: [file], title: 'コート割バックアップ' }).then(finish).catch(() => {
+                    downloadBackup(blob, fname);
+                    finish();
+                });
+            } else {
+                downloadBackup(blob, fname);
+                finish();
+            }
+        }
+
+        function downloadBackup(blob, fname) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fname;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast('💾 バックアップを保存しました');
+        }
+
+        function importBackup(file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const data = JSON.parse(reader.result);
+                    if (!data || data.app !== 'kalidia-court' || !data.state) {
+                        toast('このアプリのバックアップファイルではありません。');
+                        return;
+                    }
+                    if (!confirm('現在のコート割・大会ペアをバックアップの内容で上書きします。よろしいですか？')) return;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.state));
+                    if (data.tournament) localStorage.setItem(TOURNAMENT_KEY, JSON.stringify(data.tournament));
+                    undoStack = [];
+                    initState();
+                    loadTournamentPairs();
+                    loadState();
+                    render();
+                    toast('⬆ バックアップを復元しました');
+                } catch (err) {
+                    console.error('Import failed:', err);
+                    toast('読み込みに失敗しました。ファイルを確認してください。');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function bindBackupUI() {
+            const exp = document.getElementById('dmExportBtn');
+            const imp = document.getElementById('dmImportBtn');
+            const fileInp = document.getElementById('dmImportFile');
+            if (!exp || !imp || !fileInp) return;
+            exp.addEventListener('click', exportBackup);
+            imp.addEventListener('click', () => fileInp.click());
+            fileInp.addEventListener('change', () => {
+                if (fileInp.files && fileInp.files[0]) importBackup(fileInp.files[0]);
+                fileInp.value = '';
+            });
+            renderBackupInfo();
+        }
+
         // ── COURT TOGGLE (mobile) ────────────────────────────
         let courtsCollapsed = false;
 
@@ -2965,6 +3137,7 @@
             toast('前回保存したコート割を復元しました。');
         }
         bindTournamentPairUI();
+        bindBackupUI();
         render();
 
         // ── PWA Service Worker 登録 ─────────────────────────
