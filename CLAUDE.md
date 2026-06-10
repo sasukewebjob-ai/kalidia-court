@@ -64,7 +64,10 @@ KALIDIAコート割/
 | ゲスト追加 | 最大2名まで名前を入力して参加可能 |
 | 欠席管理 | 欠席者をプールから除外して表示 |
 | コートスワップ | コート間でメンバーを入れ替え |
-| 状態保存 | `localStorage`（キー: `badminton_court_state_v1`）に自動保存 |
+| 状態保存 | 全操作後に自動保存（`render()`末尾で`saveState()`。キー: `badminton_court_state_v1`） |
+| Undo | ↩戻すボタンで直前の操作を取り消し（メモリ上スタック最大30件、リロードで消える） |
+| バックアップ | コート割＋大会ペアをJSONでエクスポート/インポート（データ管理セクション） |
+| 更新通知 | 新バージョンデプロイ時に「更新」トーストを表示→タップで適用＆自動リロード |
 | スクリーンショット | html2canvas でコート画面を画像として保存 |
 | プリセット切替 | ボタンでコート構成を即切替 |
 | 大会ペア管理 | シーズン中固定ペアを永続登録（キー: `badminton_tournament_pairs_v1`）・適用/解除ボタンで一括反映、欠席者を含むペアは自動スキップ |
@@ -86,8 +89,11 @@ KALIDIAコート割/
 | 関数名 | 役割 |
 |---|---|
 | `initState()` | 初期状態を生成（メンバー・コートをリセット） |
-| `saveState()` | localStorageへ状態を保存 |
-| `loadState()` | localStorageから状態を復元 |
+| `saveState()` | localStorageへ状態を保存（`render()`末尾から自動で呼ばれる） |
+| `loadState()` | localStorageから状態を復元（RAWを正とするマージ型：欠席フラグと配置のみ引き継ぐ） |
+| `migrateStorageIds()` | 旧連番ID(m1〜)を名前ベースIDへ一括移行（起動時・インポート時） |
+| `pushHistory()` / `undoLast()` | Undoスタックへの記録・巻き戻し |
+| `exportBackup()` / `importBackup()` | JSONバックアップの書き出し・読み込み |
 | `assign()` | 参加者をコートに割り当て |
 | `removeFromCourt()` | コートから参加者を外す |
 | `applyPreset()` | コートプリセットを切り替え |
@@ -121,6 +127,10 @@ let tournamentPairs = []; // 大会ペア {id, pidA, pidB} シーズン永続
 ## 修正時の注意点
 
 - `render()` 呼び出しで画面全体が再描画される設計のため、DOM直接操作は原則不要
+- **メンバーIDは名前ベース**（`M_大野` / `F_濱島`）。同性で同名がいる場合はmembers.txt側で表記を変えること
+- **自動保存は`render()`末尾**で行われる。`render()`を通らない状態変更（input系）には個別に`saveState()`が必要
+- **変更操作を追加したら`pushHistory()`を入れる**（Undo対象にするため。複数件まとめて1操作＝1スナップショット）
+- **SW更新時は`service-worker.js`のCACHEバージョンを必ず上げる**（現在v8）。HTML本体はnetwork-firstなのでデプロイは自動で届き、更新トーストが出る
 - ドラッグ処理はPointer Events APIで実装（`pointerdown / pointermove / pointerup`）
 - スマホ対応済み（`user-scalable=no`、`touch-action: none`）
 - CSSカスタムプロパティ（`--male`, `--female`, `--guest` など）で色を一元管理
