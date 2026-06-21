@@ -1,4 +1,4 @@
-const CACHE = 'kalidia-court-v8';
+const CACHE = 'kalidia-court-v9';
 const ASSETS = [
   './',
   './index.html',
