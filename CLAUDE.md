@@ -135,7 +135,7 @@ let tournamentPairs = []; // 大会ペア {id, pidA, pidB} シーズン永続
 - **メンバーIDは名前ベース**（`M_大野` / `F_濱島`）。同性で同名がいる場合はmembers.txt側で表記を変えること
 - **自動保存は`render()`末尾**で行われる。`render()`を通らない状態変更（input系）には個別に`saveState()`が必要
 - **変更操作を追加したら`pushHistory()`を入れる**（Undo対象にするため。複数件まとめて1操作＝1スナップショット）
-- **SW更新時は`service-worker.js`のCACHEバージョンを必ず上げる**（現在v8）。HTML本体はnetwork-firstなのでデプロイは自動で届き、更新トーストが出る
+- **SW更新時は`service-worker.js`のCACHEバージョンを必ず上げる**（現在v10）。HTML本体はnetwork-firstなのでデプロイは自動で届き、更新トーストが出る
 - ドラッグ処理はPointer Events APIで実装（`pointerdown / pointermove / pointerup`）
 - スマホ対応済み（`user-scalable=no`、`touch-action: none`）
 - CSSカスタムプロパティ（`--male`, `--female`, `--guest` など）で色を一元管理

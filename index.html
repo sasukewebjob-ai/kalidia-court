@@ -1520,11 +1520,16 @@
                 justify-content: center;
                 gap: 8px;
                 padding: 6px;
+                min-height: 44px;
+                position: relative;
+                z-index: 5;
                 background: linear-gradient(135deg, #e8eef4, #f5f7fa);
                 border-top: 1px solid var(--border);
                 cursor: pointer;
-                touch-action: none;
+                /* ドラッグ要素と違いタップ専用。none だと一部スマホで click が発火しない */
+                touch-action: manipulation;
                 user-select: none;
+                -webkit-tap-highlight-color: rgba(0, 0, 0, .08);
             }
 
             .court-handle .handle-bar {
@@ -1585,7 +1590,7 @@
         </aside>
 
         <!-- Court toggle handle (mobile) -->
-        <div class="court-handle" id="courtHandle" onclick="toggleCourts()">
+        <div class="court-handle" id="courtHandle" role="button" tabindex="0">
             <span class="handle-arrow">▼</span>
             <span class="handle-label">コートエリア</span>
             <div class="handle-bar"></div>
@@ -3138,8 +3143,13 @@
 
         // ── COURT TOGGLE (mobile) ────────────────────────────
         let courtsCollapsed = false;
+        let courtToggleAt = 0; // pointerup→click の連続発火を1回にまとめる
 
         function toggleCourts() {
+            if (drag.active) return;              // メンバーをハンドル上でドロップした時は開閉しない
+            const now = Date.now();
+            if (now - courtToggleAt < 300) return; // 二重発火ガード
+            courtToggleAt = now;
             courtsCollapsed = !courtsCollapsed;
             const area = document.getElementById('courtsArea');
             const handle = document.getElementById('courtHandle');
@@ -3152,6 +3162,20 @@
                 handle.classList.remove('collapsed');
                 handle.querySelector('.handle-label').textContent = 'コートエリア';
             }
+        }
+
+        function bindCourtHandle() {
+            const handle = document.getElementById('courtHandle');
+            if (!handle) return;
+            handle.addEventListener('click', toggleCourts);
+            // click が発火しないスマホブラウザ向けフォールバック（重複は toggleCourts 側でガード）
+            handle.addEventListener('pointerup', e => {
+                if (e.pointerType === 'mouse') return;
+                toggleCourts();
+            });
+            handle.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCourts(); }
+            });
         }
 
         // ── 大会ペアUI イベントバインド ───────────────────────
@@ -3197,6 +3221,7 @@
         }
         bindTournamentPairUI();
         bindBackupUI();
+        bindCourtHandle();
         render();
 
         // ── PWA Service Worker 登録（更新通知つき） ──────────
