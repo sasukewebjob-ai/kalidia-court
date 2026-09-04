@@ -116,6 +116,12 @@
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
+            transition: box-shadow .15s;
+        }
+
+        /* コート内メンバーを名簿へドラッグ中（ドロップでプールに戻る） */
+        .sidebar.drop-hover {
+            box-shadow: inset 0 0 0 3px var(--accent), inset 0 0 30px #05966915;
         }
 
         .sb-head {
@@ -838,9 +844,11 @@
             height: 44px;
         }
 
+        /* タッチ端末では名簿チップの✕を出さない（同上。欠席は選択バーの「欠席へ」で行う）
+           欠席者チップの復帰ボタン（.to-return）はチップ本体にタップ操作がないのでそのまま */
         @media (hover: none) {
             .abs-btn.to-absent {
-                opacity: 1;
+                display: none;
             }
         }
 
@@ -1043,10 +1051,13 @@
             opacity: 1;
         }
 
-        /* スマホは hover がないため常時表示にする（透明なまま反応する状態を解消） */
+        /* タッチ端末ではチップ内の✕を出さない。
+           指のタップはブラウザのタッチ補正で近くの小さなボタンに吸い寄せられ、
+           実測でチップの右半分（50～90%）が「削除」になっていた。
+           コートから外すのはメンバータップ時のバナー・選択バー・名簿へのドラッグで行う */
         @media (hover: none) {
             .delbtn {
-                opacity: 1;
+                display: none;
             }
         }
 
@@ -1150,7 +1161,7 @@
         /* ── Toast ── */
         .toast {
             position: fixed;
-            bottom: 20px;
+            bottom: calc(20px + var(--bar-h, 0px));
             right: 20px;
             background: var(--surface2);
             border: 1px solid var(--accent);
@@ -1166,8 +1177,10 @@
         .pair-hint {
             position: fixed;
             bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            width: max-content;
             background: linear-gradient(135deg, #8b5cf6, #6d28d9);
             border: 1px solid #a78bfa;
             border-radius: 12px;
@@ -1177,7 +1190,44 @@
             z-index: 300;
             animation: fadeIn .3s;
             box-shadow: 0 4px 20px #00000060;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-width: calc(100vw - 16px);
+            bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .pair-hint .ph-btn {
+            min-height: 36px;
+            padding: 6px 12px;
+            border: 1px solid #ffffff80;
+            border-radius: 8px;
+            background: #ffffff22;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
             white-space: nowrap;
+        }
+
+        .pair-hint .ph-btn:active {
+            background: #ffffff44;
+        }
+
+        .pair-hint .ph-cancel {
+            min-width: 36px;
+            min-height: 36px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            font-family: inherit;
         }
 
         /* ── Scrollbar ── */
@@ -1460,13 +1510,14 @@
             .toast {
                 font-size: 11px;
                 padding: 7px 12px;
-                bottom: 10px;
+                bottom: calc(10px + var(--bar-h, 0px));
                 right: 10px;
             }
 
             .pair-hint {
                 font-size: 11px;
-                padding: 7px 14px;
+                padding: 7px 10px;
+                gap: 6px;
             }
 
             .assign-bar {
@@ -2710,9 +2761,10 @@
         function syncAssignBarSpace() {
             const bar = document.getElementById('assignBar');
             if (!bar) return;
-            document.body.style.paddingBottom = bar.classList.contains('show')
-                ? (bar.offsetHeight + 8) + 'px'
-                : '';
+            const shown = bar.classList.contains('show');
+            document.body.style.paddingBottom = shown ? (bar.offsetHeight + 8) + 'px' : '';
+            // トーストがバーに重ならないよう高さをCSS変数で共有
+            document.documentElement.style.setProperty('--bar-h', shown ? bar.offsetHeight + 'px' : '0px');
         }
 
         function updateAssignBar() {
@@ -2748,6 +2800,25 @@
                 });
                 bar.appendChild(btn);
             });
+
+            // プールに戻すボタン（コート上のメンバーが選択されているときのみ。
+            // タッチ端末ではチップ内の✕を出さないので、これが「コートから外す」の主経路）
+            const onCourt = sel.map(id => findPerson(id)).filter(p => p && p.courtId);
+            if (onCourt.length > 0) {
+                const backBtn = document.createElement('button');
+                backBtn.className = 'ab-btn';
+                backBtn.style.cssText = 'background:#05966912;border-color:#05966960;color:var(--accent2);';
+                backBtn.textContent = `↩ プールに戻す (${onCourt.length})`;
+                backBtn.addEventListener('click', () => {
+                    pushHistory();
+                    onCourt.forEach(p => { removePidFromAllCourts(p.id); p.courtId = null; });
+                    sel = [];
+                    clearPairSel();
+                    render();
+                    toast(`↩ ${onCourt.length}名をプールに戻しました`);
+                });
+                bar.appendChild(backBtn);
+            }
 
             // 欠席へ移動ボタン（peopleのみ対象、ゲストは除外）
             const targets = sel
@@ -2867,6 +2938,7 @@
             }
 
             sel = [];
+            updateAssignBar();
 
             if (pairSel && pairSel !== pid) {
                 // Check pairSel is in same court
@@ -2880,12 +2952,57 @@
                 clearPairSel();
             } else {
                 pairSel = pid;
-                const p = findPerson(pid);
-                const hint = document.getElementById('pairHint');
-                hint.textContent = `🤝 ${p ? p.name : ''} のペア相手をタップしてください`;
-                hint.style.display = 'block';
+                showPairHint(pid);
             }
             refreshSelection();
+        }
+
+        // コート内メンバーをタップしたときの操作バナー。
+        // ペア相手の案内に加えて、タッチ端末ではチップ内に✕を出さないため
+        // 「プールに戻す」「欠席」をここから行えるようにする
+        function showPairHint(pid) {
+            const p = findPerson(pid);
+            const hint = document.getElementById('pairHint');
+            hint.replaceChildren();
+
+            const msg = document.createElement('span');
+            msg.textContent = `🤝 ${p ? p.name : ''} のペア相手をタップ`;
+            hint.appendChild(msg);
+
+            const back = document.createElement('button');
+            back.className = 'ph-btn';
+            back.textContent = '↩ プールに戻す';
+            back.addEventListener('click', e => {
+                e.stopPropagation();
+                removeFromCourt(pid);
+                toast(`↩ ${p ? p.name : ''}をプールに戻しました`);
+            });
+            hint.appendChild(back);
+
+            if (p && !guests.includes(p)) {
+                const abs = document.createElement('button');
+                abs.className = 'ph-btn';
+                abs.textContent = '🚫 欠席';
+                abs.addEventListener('click', e => {
+                    e.stopPropagation();
+                    markAbsent(pid);
+                    toast(`🚫 ${p.name}を欠席にしました`);
+                });
+                hint.appendChild(abs);
+            }
+
+            const cancel = document.createElement('button');
+            cancel.className = 'ph-cancel';
+            cancel.textContent = '✕';
+            cancel.title = 'キャンセル';
+            cancel.addEventListener('click', e => {
+                e.stopPropagation();
+                clearPairSel();
+                refreshSelection();
+            });
+            hint.appendChild(cancel);
+
+            hint.style.display = 'flex';
         }
 
         function refreshSelection() {
@@ -2948,6 +3065,9 @@
             const cc = under?.closest('.card');
             // 満員コートもドロップ自体は許容しているのでハイライトは出す（色で超過を示す）
             if (cc) cc.classList.add('hover');
+            // コート内メンバーを名簿へ戻すドラッグ中はサイドバーを光らせる
+            const sb = document.querySelector('.sidebar');
+            if (sb) sb.classList.toggle('drop-hover', !!(drag.fromCourt && !cc && under?.closest('.sidebar')));
         }, { passive: true });
 
         document.addEventListener('pointerup', e => {
@@ -2959,6 +3079,26 @@
                 document.querySelectorAll('.card').forEach(c => c.classList.remove('hover'));
                 const under = document.elementFromPoint(e.clientX, e.clientY);
                 const cc = under?.closest('.card');
+                const sb = document.querySelector('.sidebar');
+                if (sb) sb.classList.remove('drop-hover');
+
+                // コート内メンバー（ペア含む）を名簿へドロップ → プールに戻す
+                if (drag.fromCourt && !cc && under?.closest('.sidebar')) {
+                    pushHistory();
+                    const pids = drag.pairPids || [drag.pid];
+                    pids.forEach(pid => {
+                        removePidFromAllCourts(pid);
+                        const p = findPerson(pid);
+                        if (p) p.courtId = null;
+                    });
+                    document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+                    drag.pid = null; drag.pairPids = null; drag.active = false;
+                    sel = [];
+                    clearPairSel();
+                    render();
+                    toast(pids.length > 1 ? '↩ ペアをプールに戻しました' : '↩ プールに戻しました');
+                    return;
+                }
 
                 // ペアごと移動
                 if (drag.pairPids) {
@@ -3031,6 +3171,8 @@
         document.addEventListener('pointercancel', () => {
             ghost.style.display = 'none';
             document.querySelectorAll('.card').forEach(c => c.classList.remove('hover'));
+            const sb = document.querySelector('.sidebar');
+            if (sb) sb.classList.remove('drop-hover');
             document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
             drag.pid = null; drag.pairPids = null; drag.active = false;
         });
