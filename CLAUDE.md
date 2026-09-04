@@ -135,7 +135,20 @@ let tournamentPairs = []; // 大会ペア {id, pidA, pidB} シーズン永続
 - **メンバーIDは名前ベース**（`M_大野` / `F_濱島`）。同性で同名がいる場合はmembers.txt側で表記を変えること
 - **自動保存は`render()`末尾**で行われる。`render()`を通らない状態変更（input系）には個別に`saveState()`が必要
 - **変更操作を追加したら`pushHistory()`を入れる**（Undo対象にするため。複数件まとめて1操作＝1スナップショット）
-- **SW更新時は`service-worker.js`のCACHEバージョンを必ず上げる**（現在v10）。HTML本体はnetwork-firstなのでデプロイは自動で届き、更新トーストが出る
+- **SW更新時は`service-worker.js`のCACHEバージョンを必ず上げる**（現在v11）。HTML本体はnetwork-firstなのでデプロイは自動で届き、更新トーストが出る
 - ドラッグ処理はPointer Events APIで実装（`pointerdown / pointermove / pointerup`）
 - スマホ対応済み（`user-scalable=no`、`touch-action: none`）
 - CSSカスタムプロパティ（`--male`, `--female`, `--guest` など）で色を一元管理
+
+---
+
+## スマホ向けの実装ルール（2026-09-05 の修正で導入）
+
+- **タップ判定の拡張は30×34pxまで**。名簿チップは幅約105pxしかなく、44pxにすると✕（欠席）が中央を食い、名前を押したつもりが欠席になる。
+  本体にタップ操作がない欠席者チップの復帰ボタン（`.abs-btn.to-return`）のみ44px。
+- **hover依存の表示は必ず `@media (hover: none)` で常時表示にする**。見えないのに反応するボタンは誤タップの原因になる。
+- **flexの子には `min-width: 0`**。これがないとコート名が人数バッジを枠外へ押し出し、ゲスト入力欄がサイドバーからはみ出す。
+- **選択をクリアする操作を追加したらバーの更新を忘れない**。`render()` から `updateAssignBar()` を呼ぶので通常は自動。
+- **選択メンバーのコート割当は `assignSelectionToCourt()` に一本化**。
+  選択バー・コート本体タップ・メンバータップの3経路でペアの引き継ぎがズレないよう、新しい割当経路を作るときもこの関数を使う。
+- 参加人数バッジは欠席者を除外して数える（`renderStats()`）。
