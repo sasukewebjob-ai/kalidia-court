@@ -1131,10 +1131,10 @@
             opacity: 1;
         }
 
-        /* スマホではタッチしやすいよう常時表示 */
+        /* 名前へのタップが解除ボタンへ補正されるため、タッチ端末は選択バーで解除する。 */
         @media (hover: none) {
             .unpair-btn {
-                opacity: 1;
+                display: none;
             }
         }
 
@@ -1808,6 +1808,7 @@
         let tournamentName = ''; // 大会名（任意）
         const STORAGE_KEY = 'badminton_court_state_v1';
         const TOURNAMENT_KEY = 'badminton_tournament_pairs_v1';
+        let saveFailureNotified = false;
 
         function initState() {
             // IDは名前ベース（M_大野 / F_濱島）。members.txtの順序変更に影響されない
@@ -1837,13 +1838,23 @@
                     courts
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+                saveFailureNotified = false;
                 if (showToast) toast('この端末にコート割を保存しました。');
                 return true;
             } catch (err) {
                 console.error('Save failed:', err);
-                if (showToast) toast('保存に失敗しました。ブラウザの空き容量を確認してください。');
+                if (showToast || !saveFailureNotified) toast('保存できません。再読み込み前にバックアップを書き出してください。');
+                saveFailureNotified = true;
                 return false;
             }
+        }
+
+        function isValidSavedState(saved) {
+            return saved && Array.isArray(saved.people) && Array.isArray(saved.guests) &&
+                saved.guests.every(g => g && typeof g.id === 'string') &&
+                Array.isArray(saved.courts) && saved.courts.length > 0 &&
+                saved.courts.every(c => c && typeof c.id === 'string') &&
+                new Set(saved.courts.map(c => c.id)).size === saved.courts.length;
         }
 
         function loadState() {
@@ -1851,7 +1862,7 @@
                 const raw = localStorage.getItem(STORAGE_KEY);
                 if (!raw) return false;
                 const saved = JSON.parse(raw);
-                if (!saved || !Array.isArray(saved.people) || !Array.isArray(saved.guests) || !Array.isArray(saved.courts)) {
+                if (!isValidSavedState(saved)) {
                     return false;
                 }
 
@@ -1868,14 +1879,11 @@
                     if (sp) p.absent = !!sp.absent;
                 });
 
-                guests = saved.guests
-                    .map(g => ({
-                        id: typeof g.id === 'string' ? g.id : '',
-                        name: typeof g.name === 'string' ? g.name : '',
-                        enabled: !!g.enabled,
-                        courtId: typeof g.courtId === 'string' ? g.courtId : null
-                    }))
-                    .filter(g => g.id.startsWith('g'));
+                guests = ['g1', 'g2'].map(id => {
+                    const g = saved.guests.find(item => item.id === id);
+                    return { id, name: typeof g?.name === 'string' ? g.name : '',
+                        enabled: !!g?.enabled, courtId: null };
+                });
 
                 currentPreset = Number.isInteger(saved.currentPreset) && PRESETS[saved.currentPreset]
                     ? saved.currentPreset
@@ -1907,10 +1915,16 @@
                 const validIds = new Set([...people, ...guests].map(p => p.id));
                 const used = new Set();
                 courts.forEach(c => {
-                    c.pids = c.pids.filter(pid => validIds.has(pid) && !used.has(pid)).slice(0, c.max);
+                    // 定員超過は配置時にも許容しているため、復元時にも全員を保持する。
+                    c.pids = c.pids.filter(pid => validIds.has(pid) && !used.has(pid) && !findPerson(pid).absent);
                     c.pids.forEach(pid => used.add(pid));
                     const pidSet = new Set(c.pids);
-                    c.pairs = c.pairs.filter(([a, b]) => pidSet.has(a) && pidSet.has(b));
+                    const paired = new Set();
+                    c.pairs = c.pairs.filter(([a, b]) => {
+                        if (!pidSet.has(a) || !pidSet.has(b) || paired.has(a) || paired.has(b)) return false;
+                        paired.add(a); paired.add(b);
+                        return true;
+                    });
                 });
 
                 [...people, ...guests].forEach(p => { p.courtId = null; });
@@ -2183,7 +2197,7 @@
                 return false;
             }
             // エラーチェック: ゲストの名前が空
-            if (guests.includes(p) && (!p.name || !p.name.trim())) {
+            if (guests.includes(p) && (!p.enabled || !p.name || !p.name.trim())) {
                 toast('ゲスト名を入力してください。');
                 return false;
             }
@@ -2524,6 +2538,12 @@
             return d;
         }
 
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[ch]);
+        }
+
         function mkChip(p, forceGender) {
             const g = forceGender || p.gender;
             const d = document.createElement('div');
@@ -2534,7 +2554,7 @@
             const absBtn = (!forceGender && (p.gender === 'male' || p.gender === 'female'))
                 ? `<button class="abs-btn to-absent" title="欠席">✕</button>`
                 : '';
-            d.innerHTML = `<div class="av">${p.name.charAt(0)}</div><div class="cn">${p.name}</div>${absBtn}<div class="dh">⠿</div>`;
+            d.innerHTML = `<div class="av">${escapeHtml(p.name.charAt(0))}</div><div class="cn">${escapeHtml(p.name)}</div>${absBtn}<div class="dh">⠿</div>`;
             const absBtnEl = d.querySelector('.abs-btn');
             if (absBtnEl) {
                 absBtnEl.addEventListener('click', e => {
@@ -2560,15 +2580,21 @@
                 inp.type = 'text'; inp.className = 'g-inp';
                 inp.placeholder = `ゲスト${i + 1}の名前`;
                 inp.value = g.name; inp.disabled = !g.enabled;
-                inp.addEventListener('input', e => { guests[i].name = e.target.value; renderPool(); renderStats(); saveState(); });
-                inp.addEventListener('change', () => {
-                    if (!guests[i].name.trim() && guests[i].courtId) {
+                let nameSnapshot;
+                inp.addEventListener('focus', () => { nameSnapshot = snapshot(); });
+                inp.addEventListener('input', e => {
+                    if (nameSnapshot) { pushHistory(nameSnapshot); nameSnapshot = null; }
+                    guests[i].name = e.target.value;
+                    if (!guests[i].name.trim()) {
                         removePidFromAllCourts(g.id);
                         guests[i].courtId = null;
-                        toast('ゲスト名が空になったためコートから外しました。');
+                        sel = sel.filter(pid => pid !== g.id);
+                        if (pairSel === g.id) clearPairSel();
                     }
-                    render();
+                    renderPool(); renderCourts(); renderStats(); updateAssignBar(); saveState();
                 });
+                // blur/changeで再描画すると、直後にタップしたチップが消えてclickが失われる。
+                // 入力中に保存・反映を完了し、フォーカス移動時にはDOMを置き換えない。
                 row.appendChild(tog); row.appendChild(inp);
                 el.appendChild(row);
             });
@@ -2581,6 +2607,8 @@
             if (!g.enabled) {
                 removePidFromAllCourts(g.id);
                 g.courtId = null;
+                sel = sel.filter(pid => pid !== g.id);
+                if (pairSel === g.id) clearPairSel();
             }
             render();
         }
@@ -2661,7 +2689,7 @@
             d.dataset.id = p.id;
             if (sel.includes(p.id)) d.classList.add('selected');
             if (pairSel === p.id) d.classList.add('selected');
-            d.innerHTML = `<div class="av">${p.name.charAt(0)}</div><div class="cn">${p.name}</div><button class="delbtn">✕</button>`;
+            d.innerHTML = `<div class="av">${escapeHtml(p.name.charAt(0))}</div><div class="cn">${escapeHtml(p.name)}</div><button class="delbtn">✕</button>`;
             d.querySelector('.delbtn').addEventListener('click', e => { e.stopPropagation(); removeFromCourt(p.id); });
             d.addEventListener('click', e => {
                 if (!e.target.classList.contains('delbtn')) onCourtMemClick(p.id, courtId);
@@ -2745,6 +2773,7 @@
 
         // ── TAP INTERACTIONS ──────────────────────────────────
         function onPoolClick(pid) {
+            if (justDragged) return;
             clearPairSel();
             // 複数選択: トグル
             const idx = sel.indexOf(pid);
@@ -2766,8 +2795,14 @@
             // トーストがバーに重ならないよう高さをCSS変数で共有
             document.documentElement.style.setProperty('--bar-h', shown ? bar.offsetHeight + 'px' : '0px');
         }
+        // 画面回転・折り返しで選択バーの高さが変わった場合にも余白を追従させる。
+        window.addEventListener('resize', syncAssignBarSpace);
 
         function updateAssignBar() {
+            sel = sel.filter(pid => {
+                const p = findPerson(pid);
+                return p && !p.absent && (!guests.includes(p) || (p.enabled && p.name.trim()));
+            });
             const bar = document.getElementById('assignBar');
             if (sel.length === 0) {
                 bar.classList.remove('show');
@@ -2846,6 +2881,26 @@
                 bar.appendChild(absBtn);
             }
 
+            const selectedPairs = courts.flatMap(c => c.pairs
+                .filter(pair => pair.every(pid => sel.includes(pid)))
+                .map(pair => ({ court: c, pair })));
+            if (selectedPairs.length) {
+                const unpairBtn = document.createElement('button');
+                unpairBtn.className = 'ab-btn';
+                unpairBtn.textContent = `ペア解除 (${selectedPairs.length}組)`;
+                unpairBtn.addEventListener('click', () => {
+                    pushHistory();
+                    selectedPairs.forEach(({ court, pair }) => {
+                        court.pairs = court.pairs.filter(item => item !== pair);
+                    });
+                    sel = [];
+                    clearPairSel();
+                    render();
+                    toast('ペアを解除しました');
+                });
+                bar.appendChild(unpairBtn);
+            }
+
             // キャンセルボタン
             const cancel = document.createElement('button');
             cancel.className = 'ab-cancel';
@@ -2899,6 +2954,7 @@
         }
 
         function onCourtClick(courtId, e) {
+            if (justDragged) return;
             if (e.target.closest('.cmem') || e.target.closest('.pair-group')) return;
             if (sel.length > 0) {
                 const count = assignSelectionToCourt(courtId);
@@ -2907,6 +2963,7 @@
         }
 
         function onCourtMemClick(pid, courtId) {
+            if (justDragged) return;
             // If we have pool selections, assign to this court
             if (sel.length > 0) {
                 const count = assignSelectionToCourt(courtId);
@@ -3009,6 +3066,10 @@
             document.querySelectorAll('[data-id]').forEach(el => {
                 const isSelected = sel.includes(el.dataset.id) || el.dataset.id === pairSel;
                 el.classList.toggle('selected', isSelected);
+            });
+            document.querySelectorAll('.pair-group').forEach(el => {
+                const ids = [...el.querySelectorAll('.cmem')].map(mem => mem.dataset.id);
+                el.classList.toggle('pair-selected', ids.every(pid => sel.includes(pid)));
             });
         }
 
@@ -3186,13 +3247,20 @@
         }
 
         // ── SCREENSHOT ────────────────────────────────────────
-        function screenshotCourts() {
+        let screenshotPending = false;
+        async function screenshotCourts() {
+            if (screenshotPending) return;
+            if (typeof html2canvas !== 'function') {
+                toast('撮影機能を読み込めません。通信状態を確認して再読み込みしてください。');
+                return;
+            }
             const grid = document.getElementById('grid');
             if (!grid || grid.children.length === 0) {
                 toast('コートにメンバーを配置してから撮影してください。');
                 return;
             }
             toast('📸 撮影中...');
+            screenshotPending = true;
 
             // 一時的にグリッドを広げて見切れを防止
             const courtsArea = document.getElementById('courtsArea');
@@ -3206,18 +3274,20 @@
             courtsArea.style.width = 'max-content';
             grid.style.minWidth = '700px';
 
-            html2canvas(grid, {
-                backgroundColor: '#ffffff',
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                windowWidth: Math.max(grid.scrollWidth, 700) + 40,
-            }).then(canvas => {
+            try {
+                const canvas = await html2canvas(grid, {
+                    backgroundColor: '#ffffff',
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    windowWidth: Math.max(grid.scrollWidth, 700) + 40,
+                });
                 body.style.overflowX = savedOverflowBody;
                 courtsArea.style.overflow = savedOverflowCourts;
                 courtsArea.style.width = savedWidth;
                 grid.style.minWidth = savedMinWidth;
                 canvas.toBlob(blob => {
+                    if (!blob) { toast('撮影に失敗しました。'); return; }
                     if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
                         const file = new File([blob], 'court.png', { type: 'image/png' });
                         navigator.share({ files: [file], title: 'コート振り分け' }).catch(() => {
@@ -3227,13 +3297,15 @@
                         downloadBlob(blob);
                     }
                 }, 'image/png');
-            }).catch(() => {
+            } catch (err) {
+                toast('撮影に失敗しました。');
+            } finally {
                 body.style.overflowX = savedOverflowBody;
                 courtsArea.style.overflow = savedOverflowCourts;
                 courtsArea.style.width = savedWidth;
                 grid.style.minWidth = savedMinWidth;
-                toast('撮影に失敗しました。');
-            });
+                screenshotPending = false;
+            }
         }
 
         function downloadBlob(blob) {
@@ -3252,16 +3324,16 @@
         function renderBackupInfo() {
             const el = document.getElementById('dmLastBackup');
             if (!el) return;
-            const at = localStorage.getItem(BACKUP_AT_KEY);
+            let at = null;
+            try { at = localStorage.getItem(BACKUP_AT_KEY); } catch { }
             el.textContent = '最終バックアップ: ' + (at ? at.slice(0, 10) : '未実施');
         }
 
         function exportBackup() {
             saveState();
             saveTournamentPairs();
-            let state = null, tournament = null;
-            try { state = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { }
-            try { tournament = JSON.parse(localStorage.getItem(TOURNAMENT_KEY)); } catch { }
+            const state = { version: 1, savedAt: new Date().toISOString(), currentPreset, people, guests, courts };
+            const tournament = { version: 1, tournamentName, tournamentPairs };
             const data = {
                 app: 'kalidia-court',
                 version: 1,
@@ -3272,7 +3344,7 @@
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const fname = 'court_backup_' + new Date().toISOString().slice(0, 10) + '.json';
             const finish = () => {
-                localStorage.setItem(BACKUP_AT_KEY, new Date().toISOString());
+                try { localStorage.setItem(BACKUP_AT_KEY, new Date().toISOString()); } catch { }
                 renderBackupInfo();
             };
             const file = new File([blob], fname, { type: 'application/json' });
@@ -3302,13 +3374,26 @@
             reader.onload = () => {
                 try {
                     const data = JSON.parse(reader.result);
-                    if (!data || data.app !== 'kalidia-court' || !data.state) {
+                    if (!data || data.app !== 'kalidia-court' || !isValidSavedState(data.state) ||
+                        (data.tournament && !Array.isArray(data.tournament.tournamentPairs))) {
                         toast('このアプリのバックアップファイルではありません。');
                         return;
                     }
                     if (!confirm('現在のコート割・大会ペアをバックアップの内容で上書きします。よろしいですか？')) return;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.state));
-                    if (data.tournament) localStorage.setItem(TOURNAMENT_KEY, JSON.stringify(data.tournament));
+                    const previousState = localStorage.getItem(STORAGE_KEY);
+                    const previousTournament = localStorage.getItem(TOURNAMENT_KEY);
+                    try {
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.state));
+                        localStorage.setItem(TOURNAMENT_KEY, JSON.stringify(data.tournament || { tournamentName: '', tournamentPairs: [] }));
+                    } catch (err) {
+                        try {
+                            if (previousState === null) localStorage.removeItem(STORAGE_KEY);
+                            else localStorage.setItem(STORAGE_KEY, previousState);
+                            if (previousTournament === null) localStorage.removeItem(TOURNAMENT_KEY);
+                            else localStorage.setItem(TOURNAMENT_KEY, previousTournament);
+                        } catch { }
+                        throw err;
+                    }
                     undoStack = [];
                     initState();
                     migrateStorageIds();
