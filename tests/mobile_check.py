@@ -21,7 +21,7 @@ def main():
     results = []
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
-        context = browser.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True, device_scale_factor=2, service_workers='block')
+        context = browser.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True, device_scale_factor=2, service_workers='block', timezone_id='Asia/Tokyo')
         context.route('https://**/*', lambda route: route.abort())
         page = context.new_page()
         errors = []
@@ -240,6 +240,21 @@ def main():
         page.evaluate("window.captureCount=0; window.html2canvas=()=>{window.captureCount++;return new Promise(resolve=>window.finishCapture=resolve)}; screenshotCourts(); screenshotCourts(); window.finishCapture({toBlob:fn=>fn(null)})")
         page.wait_for_function('!screenshotPending')
         check('double capture does not corrupt layout', "window.captureCount===1 && document.getElementById('grid').style.minWidth === ''")
+        page.clock.set_fixed_time('2026-10-14T07:30:00+09:00')  # 日本時間の朝（UTCではまだ前日）
+        page.evaluate('''() => { window.capture = null;
+            window.html2canvas = (el, opts) => {
+                const doc = document.implementation.createHTMLDocument('');
+                const g = doc.createElement('div'); g.id = 'grid'; doc.body.appendChild(g);
+                opts.onclone(doc, g);
+                window.capture = { head: doc.querySelector('.capture-head')?.textContent, pad: g.style.paddingTop };
+                return Promise.resolve({ toBlob: fn => fn(new Blob(['x'])) });
+            };
+            downloadBlob = (blob, name) => { window.capture.name = name; };
+            screenshotCourts(); }''')
+        page.wait_for_function('window.capture && window.capture.name')
+        check('capture header shows local date', "window.capture.head === '2026年10月14日（水）のコート割' && window.capture.pad === '56px'")
+        check('capture file name uses local date', "window.capture.name === 'court_2026-10-14.png'")
+        check('capture header not added to live screen', "!document.querySelector('.capture-head') && document.getElementById('grid').style.paddingTop === ''")
 
         page.evaluate('''() => {initState(); people.slice(0,8).forEach(p=>assign(p.id,'c0')); makePair('c0',people[0].id,people[1].id); sel=people.slice(0,2).map(p=>p.id); render(); document.querySelectorAll('.toast').forEach(t=>t.remove());}''')
         for width in [320, 390]:

@@ -968,6 +968,22 @@
             flex: 1;
         }
 
+        /* 撮影画像だけに入る撮影日の見出し（addCaptureHeader） */
+        .capture-head {
+            position: absolute;
+            top: 4px;
+            left: 0;
+            right: 0;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            padding-left: 12px;
+            border-left: 5px solid var(--accent);
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--text);
+        }
+
         /* ── Court card ── */
         .card {
             background: #ffffff;
@@ -3528,6 +3544,8 @@
             }
             toast('📸 撮影中...');
             screenshotPending = true;
+            const shotDate = new Date();
+            const fileName = `court_${localDateStamp(shotDate)}.png`;
 
             // 一時的にグリッドを広げて見切れを防止
             const courtsArea = document.getElementById('courtsArea');
@@ -3548,6 +3566,7 @@
                     useCORS: true,
                     logging: false,
                     windowWidth: Math.max(grid.scrollWidth, 700) + 40,
+                    onclone: doc => addCaptureHeader(doc, `${captureDateLabel(shotDate)}のコート割`),
                 });
                 body.style.overflowX = savedOverflowBody;
                 courtsArea.style.overflow = savedOverflowCourts;
@@ -3556,12 +3575,12 @@
                 canvas.toBlob(blob => {
                     if (!blob) { toast('撮影に失敗しました。'); return; }
                     if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
-                        const file = new File([blob], 'court.png', { type: 'image/png' });
-                        navigator.share({ files: [file], title: 'コート振り分け' }).catch(() => {
-                            downloadBlob(blob);
+                        const file = new File([blob], fileName, { type: 'image/png' });
+                        navigator.share({ files: [file], title: 'コート振り分け ' + captureDateLabel(shotDate) }).catch(() => {
+                            downloadBlob(blob, fileName);
                         });
                     } else {
-                        downloadBlob(blob);
+                        downloadBlob(blob, fileName);
                     }
                 }, 'image/png');
             } catch (err) {
@@ -3575,11 +3594,33 @@
             }
         }
 
-        function downloadBlob(blob) {
+        // 撮影画像の上に撮影日を入れる。撮影用に複製した画面にだけ足すので、実際の画面は変わらない
+        function addCaptureHeader(doc, text) {
+            const grid = doc.getElementById('grid');
+            if (!grid) return;
+            grid.style.position = 'relative';
+            grid.style.paddingTop = '56px';
+            const head = doc.createElement('div');
+            head.className = 'capture-head';
+            head.textContent = text;
+            grid.appendChild(head);
+        }
+
+        // 日付は端末の時刻で作る（toISOString はUTCなので、日本時間の朝9時前は前日になってしまう）
+        function captureDateLabel(date) {
+            return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（${'日月火水木金土'[date.getDay()]}）`;
+        }
+
+        function localDateStamp(date) {
+            const pad = n => String(n).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+        }
+
+        function downloadBlob(blob, fileName) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'court_' + new Date().toISOString().slice(0, 10) + '.png';
+            a.download = fileName;
             a.click();
             URL.revokeObjectURL(url);
             toast('📸 保存しました！');
