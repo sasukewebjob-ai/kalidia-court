@@ -264,7 +264,7 @@ def main():
         page.screenshot(path=str(ROOT / 'tests' / 'mobile-review.png'), full_page=True)
         page.add_init_script("Storage.prototype.getItem=()=>{throw new Error('storage disabled')}; Storage.prototype.setItem=()=>{throw new Error('storage disabled')};")
         page.reload()
-        check('app starts when browser storage unavailable', 'document.querySelectorAll("#pool .chip").length===26 && document.querySelectorAll(".card").length===4')
+        check('app starts when browser storage unavailable', 'document.querySelectorAll("#pool .chip").length===RAW.male.length+RAW.female.length && document.querySelectorAll(".card").length===4')
         check('no uncaught browser errors', f'{json.dumps(errors)}.length === 0')
         browser.close()
     server.shutdown()
