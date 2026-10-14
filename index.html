@@ -203,16 +203,39 @@
             border-color: #d9770630;
         }
 
-        .chip:hover {
-            transform: translateX(2px);
-            border-color: var(--accent);
-            background: #05966914;
+        /* ホバーはマウス端末だけ。タッチ端末ではタップ後も:hoverが残り、選択を外しても色が消えないように見える */
+        @media (hover: hover) {
+            .chip:hover {
+                transform: translateX(2px);
+                border-color: var(--accent);
+                background: #05966914;
+            }
         }
 
+        /* 選択中は塗りつぶし＋✓でオン/オフをはっきり分ける（コート内メンバーも同じ） */
         .chip.selected {
-            border-color: var(--accent);
-            background: #05966920;
-            box-shadow: 0 0 0 2px #05966948;
+            border-color: #065f46;
+            background: var(--accent2);
+            color: #fff;
+            box-shadow: 0 0 0 2px #04785755;
+        }
+
+        .chip.selected .av,
+        .cmem.selected .av {
+            background: #fff;
+            color: var(--accent2);
+            font-size: 0;
+        }
+
+        .chip.selected .av::after,
+        .cmem.selected .av::after {
+            content: '✓';
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .chip.selected .dh {
+            color: #ffffffb0;
         }
 
         .chip.dragging {
@@ -700,11 +723,96 @@
             font-family: inherit;
         }
 
-        .pbtn:hover,
         .pbtn.on {
             border-color: var(--accent);
             color: var(--accent);
             background: #05966912;
+        }
+
+        @media (hover: hover) {
+            .pbtn:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+                background: #05966912;
+            }
+        }
+
+        /* ── レイアウトの位置選択（種類を選ぶと下に出る） ── */
+        .variant-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 6px 8px;
+            border: 1px dashed #05966950;
+            border-radius: 8px;
+            background: #05966908;
+        }
+
+        .variant-bar[hidden] {
+            display: none;
+        }
+
+        .vopts {
+            display: grid;
+            grid-template-columns: repeat(2, auto);
+            gap: 6px;
+        }
+
+        .vbtn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 36px;
+            padding: 4px 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 11px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .vbtn.on {
+            background: var(--accent2);
+            border-color: #065f46;
+            color: #fff;
+        }
+
+        /* 面の小さな配置図（上段 C D ／ 下段 A B）。同じ色＝統合された面 */
+        .mini {
+            display: grid;
+            grid-template-columns: 9px 9px;
+            grid-template-rows: 9px 9px;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+
+        .mini i {
+            border-radius: 2px;
+            background: #cbd5e1;
+        }
+
+        .mini i.m0 {
+            background: var(--accent);
+        }
+
+        .mini i.m1 {
+            background: #6366f1;
+        }
+
+        .vbtn.on .mini i {
+            background: #ffffff60;
+        }
+
+        .vbtn.on .mini i.m0 {
+            background: #fff;
+        }
+
+        .vbtn.on .mini i.m1 {
+            background: #c7d2fe;
         }
 
         .sbtn {
@@ -872,8 +980,8 @@
             min-height: 260px;
         }
 
+        /* 配置（grid-row / grid-column）は renderCourts() で面の位置から設定する */
         .card.wide {
-            grid-column: span 2;
             min-height: 280px;
         }
 
@@ -1003,9 +1111,11 @@
             animation: fadeIn .2s ease;
         }
 
-        .cmem:hover {
-            border-color: var(--accent);
-            background: #05966910;
+        @media (hover: hover) {
+            .cmem:hover {
+                border-color: var(--accent);
+                background: #05966910;
+            }
         }
 
         .cmem.male {
@@ -1024,9 +1134,14 @@
             opacity: .2;
         }
 
+        /* 左の男女色ラインは残す */
         .cmem.selected {
-            border-color: var(--accent);
-            background: #05966918;
+            border-top-color: #065f46;
+            border-right-color: #065f46;
+            border-bottom-color: #065f46;
+            background: var(--accent2);
+            color: #fff;
+            box-shadow: 0 0 0 2px #04785755;
         }
 
         .delbtn {
@@ -1078,11 +1193,18 @@
             transform: scale(1.02);
         }
 
+        /* ペア色は --pair-bg で渡す（インラインのbackgroundだと選択色を上書きしてしまうため） */
         .pair-group .cmem {
             border-radius: 0;
             animation: none;
             border: none;
             border-left: none;
+            background: var(--pair-bg, var(--surface2));
+        }
+
+        .pair-group .cmem.selected {
+            background: var(--accent2);
+            box-shadow: none;
         }
 
         .pair-group .cmem:first-child {
@@ -1708,14 +1830,17 @@
         <main class="courts-area" id="courtsArea">
             <div class="ctrl">
                 <span class="pl">コート設定:</span>
-                <button class="pbtn on" data-preset="0" onclick="applyPreset(0)">4コート</button>
-                <button class="pbtn" data-preset="1" onclick="applyPreset(1)">2コート（12人）</button>
-                <button class="pbtn" data-preset="2" onclick="applyPreset(2)">3コート（12人+6人×2）</button>
+                <button class="pbtn on" data-layout-type="single" onclick="selectLayoutType('single')">4コート</button>
+                <button class="pbtn" data-layout-type="2+2" onclick="selectLayoutType('2+2')">2面+2面</button>
+                <button class="pbtn" data-layout-type="2+1+1" onclick="selectLayoutType('2+1+1')">2面+1面+1面</button>
+                <button class="pbtn" data-layout-type="1+3" onclick="selectLayoutType('1+3')">1面+3面</button>
+                <button class="pbtn" data-layout-type="all" onclick="selectLayoutType('all')">4面統合</button>
                 <button class="sbtn" onclick="swapCourts()">🔃 上下入替</button>
                 <button class="sbtn" onclick="undoLast()">↩ 戻す</button>
                 <button class="sbtn" onclick="screenshotCourts()" style="background:#6366f1;color:#fff;">📸 撮影</button>
                 <button class="rbtn" onclick="resetAll()">🔄 リセット</button>
             </div>
+            <div class="variant-bar" id="variantBar" hidden></div>
             <div class="grid" id="grid"></div>
 
             <!-- Tournament pair section（コート割の下に配置） -->
@@ -1775,19 +1900,37 @@
                 '下平', '田中', '根津真', '宮下', '依田']
         };
 
-        // Presets: each court {name, max, wide}
-        const PRESETS = [
-            // 0: 4コート (4 x 6)
-            [{ name: 'コートA', max: 6, wide: false }, { name: 'コートB', max: 6, wide: false },
-            { name: 'コートC', max: 6, wide: false }, { name: 'コートD', max: 6, wide: false }],
-            // 1: 2コート (2 x 12)
-            [{ name: 'コートA（2面）', max: 12, wide: true }, { name: 'コートB（2面）', max: 12, wide: true }],
-            // 2: 3コート (12人 + 6人×2)
-            [{ name: 'コートA（2面）', max: 12, wide: true },
-            { name: 'コートB', max: 6, wide: false }, { name: 'コートC', max: 6, wide: false }],
-        ];
+        // ── 面の配置 ──────────────────────────────────────────
+        // 体育館の4面。画面も常にこの並び： 上段 C D ／ 下段 A B
+        const CELLS = ['C', 'D', 'A', 'B'];                                 // 画面の読み順（左上→右下）
+        const CELL_POS = { C: [0, 0], D: [0, 1], A: [1, 0], B: [1, 1] };   // [行, 列]
+        const FLIP_CELL = { C: 'A', D: 'B', A: 'C', B: 'D' };               // 上下入替
+        const FACE_CAPACITY = 6;                                            // 1面あたりの定員
 
-        // ペアの背景色（はっきり区別できる6色）
+        // レイアウト：種類 → 位置の選択肢。groups は1コートが使う面の一覧
+        const LAYOUT_TYPES = [
+            { key: 'single', variants: [{ id: 'single', groups: [['C'], ['D'], ['A'], ['B']] }] },
+            {
+                key: '2+2', prompt: '統合の向き:', variants: [
+                    { id: '2+2-h', label: '横', groups: [['C', 'D'], ['A', 'B']] },
+                    { id: '2+2-v', label: '縦', groups: [['A', 'C'], ['B', 'D']] }]
+            },
+            {
+                key: '2+1+1', prompt: '統合する面:', variants: [
+                    { id: '2+1+1-top', label: '上', groups: [['C', 'D'], ['A'], ['B']] },
+                    { id: '2+1+1-bottom', label: '下', groups: [['C'], ['D'], ['A', 'B']] },
+                    { id: '2+1+1-left', label: '左', groups: [['A', 'C'], ['D'], ['B']] },
+                    { id: '2+1+1-right', label: '右', groups: [['C'], ['B', 'D'], ['A']] }]
+            },
+            {
+                key: '1+3', prompt: '単独にする面:',
+                variants: CELLS.map(x => ({ id: '1+3-' + x, label: x, groups: [[x], CELLS.filter(y => y !== x)] }))
+            },
+            { key: 'all', variants: [{ id: 'all', groups: [['A', 'B', 'C', 'D']] }] },
+        ];
+        const LAYOUTS = LAYOUT_TYPES.flatMap(t => t.variants.map(v => ({ ...v, type: t.key })));
+
+        // ペアの背景色（4面統合で12組まで色がかぶらないよう12色）
         const PAIR_BG_COLORS = [
             { bg: 'rgba(245, 158, 11, 0.25)', border: '#f59e0b', connector: '#f59e0b' },  // オレンジ
             { bg: 'rgba(139, 92, 246, 0.25)', border: '#8b5cf6', connector: '#8b5cf6' },  // パープル
@@ -1795,15 +1938,21 @@
             { bg: 'rgba(236, 72, 153, 0.25)', border: '#ec4899', connector: '#ec4899' },  // ピンク
             { bg: 'rgba(132, 204, 22, 0.25)', border: '#84cc16', connector: '#84cc16' },  // ライム
             { bg: 'rgba(249, 115, 22, 0.25)', border: '#f97316', connector: '#f97316' },  // ダークオレンジ
+            { bg: 'rgba(20, 184, 166, 0.25)', border: '#14b8a6', connector: '#14b8a6' },  // ティール
+            { bg: 'rgba(99, 102, 241, 0.25)', border: '#6366f1', connector: '#6366f1' },  // インディゴ
+            { bg: 'rgba(239, 68, 68, 0.25)', border: '#ef4444', connector: '#ef4444' },  // レッド
+            { bg: 'rgba(161, 98, 7, 0.25)', border: '#a16207', connector: '#a16207' },  // ブラウン
+            { bg: 'rgba(14, 165, 233, 0.25)', border: '#0ea5e9', connector: '#0ea5e9' },  // スカイ
+            { bg: 'rgba(100, 116, 139, 0.25)', border: '#64748b', connector: '#64748b' },  // グレー
         ];
 
         // ── STATE ─────────────────────────────────────────────
         let people = [];
-        let courts = [];   // {id, name, max, wide, pids:[], pairs:[[pidA,pidB],...]}
+        let courts = [];   // {id, name, max, cells:['C','D'], pids:[], pairs:[[pidA,pidB],...]}
         let guests = [];
         let sel = [];       // selected person ids for tap-assign (multiple)
         let pairSel = null; // selected person id for pairing (within court)
-        let currentPreset = 0;
+        let lastVariant = {}; // 種類ごとに最後に選んだ位置 {'1+3': '1+3-A', ...}（次回その種類を押したときの初期値）
         let tournamentPairs = []; // [{id, pidA, pidB}] シーズン中ずっと永続
         let tournamentName = ''; // 大会名（任意）
         const STORAGE_KEY = 'badminton_court_state_v1';
@@ -1817,25 +1966,138 @@
                 ...RAW.male.map(name => ({ id: 'M_' + name, name, gender: 'male', courtId: null, absent: false })),
                 ...RAW.female.map(name => ({ id: 'F_' + name, name, gender: 'female', courtId: null, absent: false }))
             ];
-            courts = PRESETS[0].map((p, i) => ({ id: 'c' + i, name: p.name, max: p.max, wide: p.wide, pids: [], pairs: [] }));
+            courts = makeCourts(LAYOUTS[0].groups);
             guests = [1, 2].map(i => ({ id: 'g' + i, name: '', enabled: false, courtId: null }));
         }
 
-        function updatePresetButtons() {
-            document.querySelectorAll('.pbtn[data-preset]').forEach((b) => {
-                b.classList.toggle('on', b.dataset.preset === String(currentPreset));
+        // ── LAYOUT HELPERS ────────────────────────────────────
+        const sortCells = cells => [...cells].sort();
+
+        function defaultCourtName(cells) {
+            return cells.length === CELLS.length ? '全コート' : 'コート' + sortCells(cells).join('+');
+        }
+
+        function layoutKey(groups) {
+            return groups.map(g => sortCells(g).join('')).sort().join('|');
+        }
+
+        function findLayout(groups) {
+            const key = layoutKey(groups);
+            return LAYOUTS.find(l => layoutKey(l.groups) === key) || null;
+        }
+
+        function currentLayout() {
+            return findLayout(courts.map(c => c.cells));
+        }
+
+        function isLShape(list) {
+            return list.some(c => c.cells.length === 3);
+        }
+
+        // 画面上の配置（0始まりの行・列と、何マス分か）
+        // 1面+3面のL字はマス目で表せないので、3面は2面ある段に・1面は自分の段に、どちらも横幅いっぱいで置く
+        function courtPlacement(court, lShape) {
+            const rows = court.cells.map(x => CELL_POS[x][0]);
+            const cols = court.cells.map(x => CELL_POS[x][1]);
+            if (lShape) {
+                const row = court.cells.length === 1 ? rows[0] : (rows.filter(r => r === 0).length === 2 ? 0 : 1);
+                return { row, rowSpan: 1, col: 0, colSpan: 2 };
+            }
+            const row = Math.min(...rows), col = Math.min(...cols);
+            return { row, rowSpan: Math.max(...rows) - row + 1, col, colSpan: Math.max(...cols) - col + 1 };
+        }
+
+        // 面の組み合わせからコートを作る（画面の並び順に c0, c1, … を振る）
+        function makeCourts(groups) {
+            const list = groups.map(g => {
+                const cells = sortCells(g);
+                return { id: '', name: defaultCourtName(cells), max: FACE_CAPACITY * cells.length, cells, pids: [], pairs: [] };
             });
+            const lShape = isLShape(list);
+            list.sort((a, b) => {
+                const pa = courtPlacement(a, lShape), pb = courtPlacement(b, lShape);
+                return pa.row - pb.row || pa.col - pb.col;
+            });
+            list.forEach((c, i) => { c.id = 'c' + i; });
+            return list;
+        }
+
+        // 旧コートのメンバー・ペアを新コートへ移す（ペアは重複させない）
+        function moveCourtContents(from, to) {
+            from.pids.forEach(pid => {
+                if (!to.pids.includes(pid)) to.pids.push(pid);
+                const person = findPerson(pid);
+                if (person) person.courtId = to.id;
+            });
+            from.pairs.forEach(pair => {
+                const dup = to.pairs.some(pp =>
+                    (pp[0] === pair[0] && pp[1] === pair[1]) ||
+                    (pp[0] === pair[1] && pp[1] === pair[0])
+                );
+                if (!dup) to.pairs.push([...pair]);
+            });
+        }
+
+        function updateLayoutControls() {
+            const layout = currentLayout();
+            document.querySelectorAll('.pbtn[data-layout-type]').forEach(b => {
+                b.classList.toggle('on', !!layout && b.dataset.layoutType === layout.type);
+            });
+            const bar = document.getElementById('variantBar');
+            if (!bar) return;
+            const type = layout && LAYOUT_TYPES.find(t => t.key === layout.type);
+            bar.replaceChildren();
+            bar.hidden = !type || type.variants.length < 2;
+            if (bar.hidden) return;
+
+            const label = document.createElement('span');
+            label.className = 'pl';
+            label.textContent = type.prompt;
+            const opts = document.createElement('div');
+            opts.className = 'vopts';
+            type.variants.forEach(v => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'vbtn' + (v.id === layout.id ? ' on' : '');
+                btn.dataset.layout = v.id;
+                const text = document.createElement('span');
+                text.textContent = variantLabel(type, v);
+                btn.append(mkMiniMap(v.groups), text);
+                btn.addEventListener('click', () => applyLayout(v.id));
+                opts.appendChild(btn);
+            });
+            bar.append(label, opts);
+        }
+
+        function variantLabel(type, variant) {
+            if (type.key === '1+3') return variant.label;
+            const merged = variant.groups.filter(g => g.length > 1).map(g => sortCells(g).join('+'));
+            return `${variant.label}（${merged.join('／')}）`;
+        }
+
+        // 面の配置図（上段 C D ／ 下段 A B）。統合された面を同じ色で塗り、1面だけのコートは灰色
+        function mkMiniMap(groups) {
+            const map = document.createElement('span');
+            map.className = 'mini';
+            const merged = groups.filter(g => g.length > 1);
+            CELLS.forEach(x => {
+                const cell = document.createElement('i');
+                const idx = merged.findIndex(g => g.includes(x));
+                if (idx >= 0) cell.className = 'm' + idx;
+                map.appendChild(cell);
+            });
+            return map;
         }
 
         function saveState(showToast = false) {
             try {
                 const payload = {
-                    version: 1,
+                    version: 2,
                     savedAt: new Date().toISOString(),
-                    currentPreset,
                     people,
                     guests,
-                    courts
+                    courts,
+                    lastVariant
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
                 saveFailureNotified = false;
@@ -1885,14 +2147,18 @@
                         enabled: !!g?.enabled, courtId: null };
                 });
 
-                currentPreset = Number.isInteger(saved.currentPreset) && PRESETS[saved.currentPreset]
-                    ? saved.currentPreset
-                    : 0;
+                lastVariant = {};
+                if (saved.lastVariant && typeof saved.lastVariant === 'object') {
+                    LAYOUT_TYPES.forEach(t => {
+                        const id = saved.lastVariant[t.key];
+                        if (t.variants.some(v => v.id === id)) lastVariant[t.key] = id;
+                    });
+                }
 
-                courts = saved.courts.map((c, i) => ({
+                courts = restoreCourtLayout(saved.courts.map((c, i) => ({
                     id: typeof c.id === 'string' ? c.id : ('c' + i),
                     name: typeof c.name === 'string' && c.name.trim() ? c.name : ('コート' + (i + 1)),
-                    max: Number.isInteger(c.max) && c.max > 0 ? c.max : 6,
+                    cells: Array.isArray(c.cells) ? c.cells.filter(x => CELLS.includes(x)) : [],
                     wide: !!c.wide,
                     pids: Array.isArray(c.pids)
                         ? [...new Set(c.pids.filter(pid => typeof pid === 'string'))]
@@ -1908,7 +2174,7 @@
                             )
                             .map(pair => [pair[0], pair[1]])
                         : []
-                }));
+                })));
 
                 if (courts.length === 0) return false;
 
@@ -1947,12 +2213,53 @@
 
                 sel = [];
                 clearPairSel();
-                updatePresetButtons();
                 return true;
             } catch (err) {
                 console.error('Load failed:', err);
                 return false;
             }
+        }
+
+        // 保存データのコートを面配置つきに揃える。cells があればそのまま、
+        // 旧形式（cellsなし・2026-10以前）は旧画面の並びから面を割り出す
+        function restoreCourtLayout(list) {
+            const legacy = !findLayout(list.map(c => c.cells));
+            const groups = legacy ? legacyCells(list) : list.map(c => c.cells);
+            // 形が分からないときは4コートに戻す（全員プールへ。欠席フラグは残る）
+            if (!groups) return makeCourts(LAYOUTS[0].groups);
+
+            const result = list.map((c, i) => {
+                const cells = sortCells(groups[i]);
+                // 旧形式の既定名（コートA（2面）など）は面の名前に付け替える。自分で付けた名前は残す
+                const name = legacy && /^コート[A-D](（2面）)?$/.test(c.name) ? defaultCourtName(cells) : c.name;
+                return { id: c.id, name, max: FACE_CAPACITY * cells.length, cells, pids: c.pids, pairs: c.pairs };
+            });
+            const lShape = isLShape(result);
+            return result.sort((a, b) => {
+                const pa = courtPlacement(a, lShape), pb = courtPlacement(b, lShape);
+                return pa.row - pb.row || pa.col - pb.col;
+            });
+        }
+
+        // 旧画面は配列順に2列で自動配置（wide＝2マス）。左上から C D ／ A B に当てはめる
+        function legacyCells(list) {
+            // 4面とも「コートA〜D」なら名前の面へ（人とコート名の対応を保つ。上下入替後の並びもこれで揃う）
+            const letters = list.map(c => (c.name.match(/^コート([A-D])$/) || [])[1]);
+            if (list.length === 4 && list.every(c => !c.wide) && letters.every(Boolean) && new Set(letters).size === 4) {
+                return letters.map(x => [x]);
+            }
+            const rows = [CELLS.slice(0, 2), CELLS.slice(2)];
+            const groups = [];
+            let row = 0, col = 0;
+            for (const c of list) {
+                const width = c.wide ? 2 : 1;
+                if (col + width > 2) { row++; col = 0; }
+                if (row > 1) return null;
+                groups.push(rows[row].slice(col, col + width));
+                col += width;
+                if (col >= 2) { row++; col = 0; }
+            }
+            return findLayout(groups) ? groups : null;
         }
 
         function findPerson(id) { return people.find(p => p.id === id) || guests.find(g => g.id === id); }
@@ -2228,45 +2535,38 @@
             render();
         }
 
-        function applyPreset(i) {
-            pushHistory();
-            currentPreset = i;
-            const oldCourts = courts;
-            const newCourts = PRESETS[i].map((p, j) => ({
-                id: 'c' + j, name: p.name, max: p.max, wide: p.wide, pids: [], pairs: []
-            }));
+        // 種類ボタン：同じ種類なら何もしない（位置は下に出るボタンで選ぶ）。前回その種類で選んだ位置を優先
+        function selectLayoutType(typeKey) {
+            const type = LAYOUT_TYPES.find(t => t.key === typeKey);
+            if (!type) return;
+            if (currentLayout()?.type === typeKey) return;
+            const remembered = type.variants.find(v => v.id === lastVariant[typeKey]);
+            applyLayout((remembered || type.variants[0]).id);
+        }
 
-            if (newCourts.length === 0) {
-                [...people, ...guests].forEach(p => p.courtId = null);
-                courts = newCourts;
-                updatePresetButtons();
-                clearPairSel();
+        function applyLayout(layoutId) {
+            const layout = LAYOUTS.find(l => l.id === layoutId);
+            if (!layout) return;
+            lastVariant[layout.type] = layout.id;
+            if (currentLayout() === layout) {
                 render();
                 return;
             }
+            pushHistory();
+            const newCourts = makeCourts(layout.groups);
 
-            // 旧コート → 新コートへメンバー・ペアを引き継ぎ（消えるコートはmodで合流）
-            oldCourts.forEach((oldC, oldIdx) => {
-                const newIdx = oldIdx < newCourts.length ? oldIdx : (oldIdx % newCourts.length);
-                const target = newCourts[newIdx];
-
-                oldC.pids.forEach(pid => {
-                    if (!target.pids.includes(pid)) target.pids.push(pid);
-                    const person = findPerson(pid);
-                    if (person) person.courtId = target.id;
+            // 旧コートの人は、面が一番多く重なる新コートへ（同数なら旧コートの左上側の面を含む方）
+            courts.forEach(oldC => {
+                const first = [...oldC.cells].sort((x, y) => CELLS.indexOf(x) - CELLS.indexOf(y))[0];
+                let target = newCourts[0], best = -1;
+                newCourts.forEach(nc => {
+                    const score = nc.cells.filter(x => oldC.cells.includes(x)).length * 2 + (nc.cells.includes(first) ? 1 : 0);
+                    if (score > best) { best = score; target = nc; }
                 });
-
-                oldC.pairs.forEach(pair => {
-                    const dup = target.pairs.some(pp =>
-                        (pp[0] === pair[0] && pp[1] === pair[1]) ||
-                        (pp[0] === pair[1] && pp[1] === pair[0])
-                    );
-                    if (!dup) target.pairs.push([...pair]);
-                });
+                moveCourtContents(oldC, target);
             });
 
             courts = newCourts;
-            updatePresetButtons();
             clearPairSel();
             render();
         }
@@ -2281,60 +2581,26 @@
             render();
         }
 
-        // ── SWAP COURTS（全コート設定対応）──────────────────────
+        // ── SWAP COURTS（上段と下段のメンバーを入れ替え。面の位置は常に 上段C D ／ 下段A B）──
+        // 統合の形も一緒に上下反転する（例：上C+D統合 → 下A+B統合、1面+3面の単独A → 単独C）
         function swapCourts() {
-            // グリッドの行を判定（2カラムレイアウト）
-            const rows = [];
-            let currentRow = [];
-            let colsUsed = 0;
-            for (let i = 0; i < courts.length; i++) {
-                const width = courts[i].wide ? 2 : 1;
-                currentRow.push(i);
-                colsUsed += width;
-                if (colsUsed >= 2) {
-                    rows.push(currentRow);
-                    currentRow = [];
-                    colsUsed = 0;
-                }
-            }
-            if (currentRow.length > 0) rows.push(currentRow);
-
-            if (rows.length < 2) {
-                toast('入れ替えるコートがありません。');
+            const flipped = courts.map(c => sortCells(c.cells.map(x => FLIP_CELL[x])));
+            if (courts.every((c, i) => flipped[i].join() === c.cells.join())) {
+                toast('上下に分かれたコートがありません。');
                 return;
             }
             pushHistory();
-
-            // 上半分と下半分を判定
-            const mid = Math.ceil(rows.length / 2);
-            const topIndices = rows.slice(0, mid).flat();
-            const bottomIndices = rows.slice(mid).flat();
-            // 新しい順序: 下 → 上
-            const newOrder = [...bottomIndices, ...topIndices];
-
-            // 全コートデータを保存
-            const savedData = courts.map(c => ({
-                name: c.name, max: c.max, wide: c.wide,
-                pids: [...c.pids], pairs: c.pairs.map(p => [...p])
-            }));
-
-            // 新しい順序でデータを適用
-            newOrder.forEach((oldIdx, newIdx) => {
-                const data = savedData[oldIdx];
-                courts[newIdx].name = data.name;
-                courts[newIdx].max = data.max;
-                courts[newIdx].wide = data.wide;
-                courts[newIdx].pids = data.pids;
-                courts[newIdx].pairs = data.pairs;
-                // courtIdを更新
-                data.pids.forEach(pid => {
-                    const p = findPerson(pid);
-                    if (p) p.courtId = courts[newIdx].id;
-                });
+            const newCourts = makeCourts(flipped);
+            courts.forEach((oldC, i) => {
+                const target = newCourts.find(nc => nc.cells.join() === flipped[i].join());
+                // 自分で付けた名前はメンバーと一緒に移す（既定名は移動先の面の名前になる）
+                if (oldC.name !== defaultCourtName(oldC.cells)) target.name = oldC.name;
+                moveCourtContents(oldC, target);
             });
-
+            courts = newCourts;
+            clearPairSel();
             render();
-            toast('上段と下段のコートを入れ替えました！');
+            toast('上段と下段のメンバーを入れ替えました！');
         }
 
         // ── ABSENT ────────────────────────────────────────────────
@@ -2395,7 +2661,7 @@
         let undoStack = [];
 
         function snapshot() {
-            return JSON.stringify({ currentPreset, people, guests, courts });
+            return JSON.stringify({ people, guests, courts });
         }
 
         function pushHistory(snap) {
@@ -2409,20 +2675,17 @@
                 return;
             }
             const s = JSON.parse(undoStack.pop());
-            currentPreset = s.currentPreset;
             people = s.people;
             guests = s.guests;
             courts = s.courts;
             sel = [];
             clearPairSel();
-            updatePresetButtons();
-            updateAssignBar();
             render();
             toast('↩ 直前の操作を元に戻しました');
         }
 
         // ── RENDER ────────────────────────────────────────────
-        function render() { renderPool(); renderAbsent(); renderCourts(); renderStats(); renderGuests(); renderTournamentPairs(); updateAssignBar(); saveState(); }
+        function render() { renderPool(); renderAbsent(); renderCourts(); updateLayoutControls(); renderStats(); renderGuests(); renderTournamentPairs(); updateAssignBar(); saveState(); }
 
         function renderTournamentPairs() {
             const list = document.getElementById('tpList');
@@ -2616,10 +2879,14 @@
         function renderCourts() {
             const grid = document.getElementById('grid');
             grid.innerHTML = '';
+            const lShape = isLShape(courts);
             courts.forEach((c, i) => {
                 const card = document.createElement('div');
                 const full = c.pids.length >= c.max;
-                card.className = 'card' + (full ? ' full' : '') + (c.wide ? ' wide' : '');
+                const pos = courtPlacement(c, lShape);
+                card.className = 'card' + (full ? ' full' : '') + (pos.colSpan === 2 ? ' wide' : '');
+                card.style.gridRow = `${pos.row + 1} / span ${pos.rowSpan}`;
+                card.style.gridColumn = `${pos.col + 1} / span ${pos.colSpan}`;
                 card.dataset.cid = c.id;
 
                 // Header
@@ -2631,7 +2898,7 @@
 
                 const maxLabel = document.createElement('span');
                 maxLabel.className = 'cmax';
-                maxLabel.textContent = c.wide ? '(2面)' : '(1面)';
+                maxLabel.textContent = `(${c.cells.length}面)`;
 
                 const gm = c.pids.filter(pid => people.some(p => p.id === pid && p.gender === 'male')).length;
                 const gf = c.pids.filter(pid => people.some(p => p.id === pid && p.gender === 'female')).length;
@@ -2710,7 +2977,7 @@
 
             const elA = mkCourtMem(pA, courtId);
             elA.style.flex = '1';
-            elA.style.background = pairColor.bg;
+            elA.style.setProperty('--pair-bg', pairColor.bg);
 
             const conn = document.createElement('div');
             conn.className = 'pair-connector';
@@ -2750,7 +3017,7 @@
 
             const elB = mkCourtMem(pB, courtId);
             elB.style.flex = '1';
-            elB.style.background = pairColor.bg;
+            elB.style.setProperty('--pair-bg', pairColor.bg);
 
             const unpairBtn = document.createElement('button');
             unpairBtn.className = 'unpair-btn';
@@ -3332,7 +3599,7 @@
         function exportBackup() {
             saveState();
             saveTournamentPairs();
-            const state = { version: 1, savedAt: new Date().toISOString(), currentPreset, people, guests, courts };
+            const state = { version: 2, savedAt: new Date().toISOString(), people, guests, courts, lastVariant };
             const tournament = { version: 1, tournamentName, tournamentPairs };
             const data = {
                 app: 'kalidia-court',

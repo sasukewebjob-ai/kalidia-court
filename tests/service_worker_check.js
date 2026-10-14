@@ -10,7 +10,7 @@ const vm = require('node:vm');
     const ctx = {
         self: { addEventListener: (type, fn) => handlers[type] = fn, clients: { claim: async () => {} } },
         caches: {
-            keys: async () => ['kalidia-court-v11', 'kalidia-court-v12', 'other-app-v1'],
+            keys: async () => ['kalidia-court-v12', 'kalidia-court-v13', 'other-app-v1'],
             delete: async key => deleted.push(key),
             match: async () => cachedPage,
             open: async () => ({ put: async (...args) => writes.push(args) }),
@@ -21,7 +21,7 @@ const vm = require('node:vm');
     let pending;
     handlers.activate({ waitUntil: promise => pending = promise });
     await pending;
-    assert.deepEqual(deleted, ['kalidia-court-v11']);
+    assert.deepEqual(deleted, ['kalidia-court-v12']);
     console.log('PASS: update preserves other apps and current cache');
     handlers.fetch({ request: { method: 'GET', mode: 'navigate' }, respondWith: promise => pending = promise });
     assert.equal(await pending, cachedPage);

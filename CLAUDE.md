@@ -50,13 +50,23 @@ KALIDIAコート割/
 
 ---
 
-## コートプリセット（PRESETS定数）
+## 面の配置とレイアウト（LAYOUT_TYPES定数、2026-10-14）
 
-| インデックス | 構成 | 内容 |
+体育館の4面を画面でも常に **上段 C D ／ 下段 A B** の位置に表示する（`CELLS` / `CELL_POS`）。
+各コートは使う面を `cells`（例 `['C','D']`、アルファベット順）で持ち、画面の位置・定員（6人×面数）・既定名（`コートC+D`、4面は`全コート`）はここから決まる。
+
+| 種類（ボタン） | 位置の選択肢（下に出るボタン） | レイアウトID |
 |---|---|---|
-| 0 | 4コート | コートA〜D 各6名 |
-| 1 | 2コート（2面） | コートA・B 各12名 |
-| 2 | 混在 | コートA（2面・12名）＋ コートB・C（各6名） |
+| 4コート | なし | `single` |
+| 2面+2面 | 横（C+D／A+B）・縦（A+C／B+D） | `2+2-h` / `2+2-v` |
+| 2面+1面+1面 | 上（C+D）・下（A+B）・左（A+C）・右（B+D） | `2+1+1-top` など |
+| 1面+3面 | 単独にする面 C・D・A・B | `1+3-C` など |
+| 4面統合 | なし | `all` |
+
+- 種類ボタンは前回その種類で選んだ位置を使う（`lastVariant`、保存データに含む）。同じ種類を押し直しても何もしない。
+- 1面+3面のL字はマス目で表せないため、3面は2面ある段に・1面は自分の段に、どちらも横幅いっぱいで置く（`courtPlacement()`）。
+- レイアウト変更時、旧コートの人は面が一番多く重なる新コートへ移る（同数なら旧コートの左上側の面を含む方）。
+- 現在のレイアウトは保存せず、`courts` の `cells` から毎回割り出す（`currentLayout()`）。
 
 ---
 
@@ -65,17 +75,18 @@ KALIDIAコート割/
 | 機能 | 説明 |
 |---|---|
 | コート割り振り | タップ選択 or ドラッグ＆ドロップで参加者をコートへ配置 |
-| ペア設定 | コート内でペア登録・色分け表示（6色） |
+| ペア設定 | コート内でペア登録・色分け表示（12色） |
 | ゲスト追加 | 最大2名まで名前を入力して参加可能 |
 | 欠席管理 | 欠席者をプールから除外して表示（PC: 名簿チップの✕／スマホ: 選択バー「欠席へ」またはメンバータップ時バナー「欠席」） |
 | コートから外す | PC: メンバーの✕／スマホ: メンバータップ時バナー「プールに戻す」、選択バー「プールに戻す」、名簿エリアへドラッグ |
-| コートスワップ | コート間でメンバーを入れ替え |
+| 上下入替 | 面の位置は固定のまま、上段と下段のメンバーを入れ替え（統合の形も上下反転。自分で付けたコート名はメンバーと一緒に移る） |
 | 状態保存 | 全操作後に自動保存（`render()`末尾で`saveState()`。キー: `badminton_court_state_v1`） |
 | Undo | ↩戻すボタンで直前の操作を取り消し（メモリ上スタック最大30件、リロードで消える） |
 | バックアップ | コート割＋大会ペアをJSONでエクスポート/インポート（データ管理セクション） |
 | 更新通知 | 新バージョンデプロイ時に「更新」トーストを表示→タップで適用＆自動リロード |
 | スクリーンショット | html2canvas でコート画面を画像として保存 |
-| プリセット切替 | ボタンでコート構成を即切替 |
+| レイアウト切替 | 種類→位置の2段ボタンで全12パターンを切替（上の表） |
+| 選択表示 | 選択中は濃い緑の塗りつぶし＋頭文字が✓。ホバー色はマウス端末のみ（タッチ端末で解除後も色が残るのを防ぐ） |
 | 大会ペア管理 | シーズン中固定ペアを永続登録（キー: `badminton_tournament_pairs_v1`）・適用/解除ボタンで一括反映、欠席者を含むペアは自動スキップ |
 | PWA対応 | オフライン動作・ホーム画面追加（manifest.json + service-worker.js） |
 
@@ -102,9 +113,14 @@ KALIDIAコート割/
 | `exportBackup()` / `importBackup()` | JSONバックアップの書き出し・読み込み |
 | `assign()` | 参加者をコートに割り当て |
 | `removeFromCourt()` | コートから参加者を外す |
-| `applyPreset()` | コートプリセットを切り替え |
+| `selectLayoutType()` / `applyLayout()` | 種類ボタン／位置ボタンでレイアウトを切替（メンバーは同じ面のコートへ） |
+| `makeCourts()` | 面の組み合わせからコートを作る（画面の並び順に c0, c1, …） |
+| `currentLayout()` | 今の `courts` の `cells` から該当レイアウトを割り出す |
+| `courtPlacement()` | コートの画面位置（grid の行・列）を計算 |
+| `updateLayoutControls()` | 種類ボタンの状態と位置選択バーを描画（`render()` から呼ばれる） |
+| `restoreCourtLayout()` / `legacyCells()` | 保存データ復元時に面情報を揃える。旧形式（cellsなし）は旧画面の並びから移行 |
 | `resetAll()` | 全員をプールに戻す |
-| `swapCourts()` | 2コート間でメンバーを入れ替え |
+| `swapCourts()` | 上段と下段のメンバーを入れ替え（面の位置は固定） |
 | `makePair() / unpair()` | ペア登録・解除 |
 | `markAbsent() / markPresent()` | 欠席・出席の切替 |
 | `render()` | 画面全体を再描画（末尾で `updateAssignBar()` と `saveState()`） |
@@ -124,10 +140,11 @@ KALIDIAコート割/
 
 ```js
 let people = [];          // 参加者リスト {id, name, gender, courtId, absent}
-let courts = [];          // コートリスト {id, name, max, wide, pids[], pairs[]}
+let courts = [];          // コートリスト {id, name, max, cells[], pids[], pairs[]}
 let guests = [];          // ゲスト {id, name, enabled, courtId}
 let sel = [];             // タップ選択中の参加者ID（複数可）
 let pairSel = null;       // ペア選択中の参加者ID
+let lastVariant = {};     // 種類ごとに最後に選んだ位置 {'1+3': '1+3-A', ...}
 let tournamentPairs = []; // 大会ペア {id, pidA, pidB} シーズン永続
 ```
 
@@ -139,7 +156,7 @@ let tournamentPairs = []; // 大会ペア {id, pidA, pidB} シーズン永続
 - **メンバーIDは名前ベース**（`M_大野` / `F_濱島`）。同性で同名がいる場合はmembers.txt側で表記を変えること
 - **自動保存は`render()`末尾**で行われる。`render()`を通らない状態変更（input系）には個別に`saveState()`が必要
 - **変更操作を追加したら`pushHistory()`を入れる**（Undo対象にするため。複数件まとめて1操作＝1スナップショット）
-- **SW更新時は`service-worker.js`のCACHEバージョンを必ず上げる**（現在v12）。HTML本体はnetwork-firstなのでデプロイは自動で届き、更新トーストが出る
+- **SW更新時は`service-worker.js`のCACHEバージョンを必ず上げる**（現在v13。`tests/service_worker_check.js` のキャッシュ名も合わせる）。HTML本体はnetwork-firstなのでデプロイは自動で届き、更新トーストが出る
 - ドラッグ処理はPointer Events APIで実装（`pointerdown / pointermove / pointerup`）
 - スマホ対応済み（`user-scalable=no`、`touch-action: none`）
 - CSSカスタムプロパティ（`--male`, `--female`, `--guest` など）で色を一元管理
@@ -169,3 +186,10 @@ let tournamentPairs = []; // 大会ペア {id, pidA, pidB} シーズン永続
 - ゲスト入力はinputイベントで保存・反映し、changeイベントでDOMを作り直さない（直後のタップを失うため）。
 - 検証: `python tests/mobile_check.py`（Python PlaywrightとChromiumが必要）、`node tests/service_worker_check.js`。
 - 検証範囲・制約は `tests/REVIEW.md` を参照。
+
+## 面配置・選択表示の変更（2026-10-14）
+
+- 新しいレイアウトを足すときは `LAYOUT_TYPES` に groups（面の組み合わせ）を追加するだけ。配置・定員・名前・ボタンは自動。
+- コートの並び順（`courts` 配列）は画面の読み順。`courts[0]` は左上（4コート時はコートC）。
+- ペアの背景色は `--pair-bg` で渡す（インラインの background だと選択色を上書きしてしまう）。12色あるので4面統合の12組まで色がかぶらない。
+- ホバー用のスタイルを追加するときは `@media (hover: hover)` の中に書く（タッチ端末ではタップ後も :hover が残る）。
